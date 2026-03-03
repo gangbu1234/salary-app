@@ -142,8 +142,13 @@ export default function CalendarApp() {
   const [togglePos, setTogglePos] = useState({ y: 16 });
   const [isDragging, setIsDragging] = useState(false);
 
+  // Initialize toggle position after mount to avoid SSR issues
+  useEffect(() => {
+    setTogglePos({ y: window.innerHeight / 2 - 24 });
+  }, []);
+
   // Drag logic for mobile toggle
-  const handleTouchMove = (e: React.TouchEvents) => {
+  const handleTouchMove = (e: React.TouchEvent) => {
     if (!isDragging) return;
     const touch = e.touches[0];
     const newY = Math.max(0, Math.min(window.innerHeight - 48, touch.clientY - 24));
