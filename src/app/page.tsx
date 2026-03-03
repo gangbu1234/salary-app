@@ -56,6 +56,7 @@ interface HourlyRatePreset {
   name: string;
   rate: number;
   color: string;
+  workplace?: string;
 }
 
 interface CommutingPreset {
@@ -72,6 +73,7 @@ interface WorkEntry {
   presetId: string;
   commuting: number;
   commutingPresetId?: string;
+  workplace?: string;
 }
 
 const PRESET_COLORS = [
@@ -147,9 +149,9 @@ function CalendarApp() {
   const [entries, setEntries] = useState<WorkEntry[]>([]);
   const [filterPresetId, setFilterPresetId] = useState<string>("all");
   const [presets, setPresets] = useState<HourlyRatePreset[]>([
-    { id: "1", name: "基本時給", rate: 3000, color: PRESET_COLORS[0] },
-    { id: "2", name: "品川学藝高校", rate: 5000, color: PRESET_COLORS[1] },
-    { id: "3", name: "戸塚", rate: 4500, color: PRESET_COLORS[4] },
+    { id: "1", name: "基本時給", rate: 3000, color: PRESET_COLORS[0], workplace: "自宅" },
+    { id: "2", name: "品川学藝高校", rate: 5000, color: PRESET_COLORS[1], workplace: "品川" },
+    { id: "3", name: "戸塚", rate: 4500, color: PRESET_COLORS[4], workplace: "横浜" },
   ]);
 
   // --- Derived Data ---
@@ -194,6 +196,7 @@ function CalendarApp() {
   const [formPresetId, setFormPresetId] = useState("1");
   const [formCommPresetId, setFormCommPresetId] = useState<string>("c2");
   const [formCommuting, setFormCommuting] = useState(1200);
+  const [formWorkplace, setFormWorkplace] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [togglePos, setTogglePos] = useState({ y: 80 }); // Moved down a bit from top
   const [isDragging, setIsDragging] = useState(false);
@@ -230,39 +233,42 @@ function CalendarApp() {
 
   // Drag logic for mobile toggle
   const handleTouchStart = (e: React.TouchEvent) => {
-    // Prevent scrolling while dragging the handle
-    setIsDragging(true);
     setDragStartY(e.touches[0].clientY);
     setDragStartToggleY(togglePos.y);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging) return;
-    // We cannot reliably call preventDefault in passive listeners, 
-    // but touch-action: none on the element will handle it.
     const deltaY = e.touches[0].clientY - dragStartY;
-    const newY = Math.max(0, Math.min(window.innerHeight - 80, dragStartToggleY + deltaY));
-    setTogglePos({ y: newY });
+    if (Math.abs(deltaY) > 5) {
+      setIsDragging(true);
+      const newY = Math.max(0, Math.min(window.innerHeight - 80, dragStartToggleY + deltaY));
+      setTogglePos({ y: newY });
+    }
   };
 
   const handleTouchEnd = () => {
-    setTimeout(() => setIsDragging(false), 50);
+    setDragStartY(0);
+    setTimeout(() => setIsDragging(false), 100);
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true);
     setDragStartY(e.clientY);
     setDragStartToggleY(togglePos.y);
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
+    if (dragStartY === 0) return;
     const deltaY = e.clientY - dragStartY;
-    const newY = Math.max(0, Math.min(window.innerHeight - 60, dragStartToggleY + deltaY));
-    setTogglePos({ y: newY });
+    if (Math.abs(deltaY) > 5) {
+      setIsDragging(true);
+      const newY = Math.max(0, Math.min(window.innerHeight - 80, dragStartToggleY + deltaY));
+      setTogglePos({ y: newY });
+    }
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUp = (e: React.MouseEvent) => {
+    setDragStartY(0);
+    // Use a shorter timeout or check if we actually moved significantly
     setTimeout(() => setIsDragging(false), 50);
   };
 
@@ -311,12 +317,12 @@ function CalendarApp() {
                       <div className={cn("w-4 h-16 rounded-full", preset?.color?.split(" ")[0])} />
                       <div>
                         <p className="text-3xl font-black tracking-tighter">{entry.startTime} - {entry.endTime} <span className="text-gray-300 ml-2">({(minutes / 60).toFixed(1)}h)</span></p>
-                        <p className="text-lg font-bold text-gray-400">{preset?.name}</p>
+                        <p className="text-lg font-bold text-gray-400">{preset?.name}{entry.workplace ? ` @ ${entry.workplace}` : preset?.workplace ? ` @ ${preset.workplace}` : ""}</p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="text-3xl font-black text-blue-600">¥{(Math.round((minutes / 60) * (preset?.rate || 0)) + entry.commuting).toLocaleString()}</p>
-                      <Button variant="ghost" size="sm" onClick={(e) => deleteEntry(entry.id, e as any)} className="text-red-400 opacity-0 group-hover:opacity-100">記録を削除</Button>
+                      <Button variant="ghost" size="sm" onClick={(e) => deleteEntry(entry.id, e as any)} className="text-red-400 lg:opacity-0 lg:group-hover:opacity-100">記録を削除</Button>
                     </div>
                   </div>
                 );
@@ -338,10 +344,13 @@ function CalendarApp() {
                 const dailyEntries = getDailyEntries(day);
                 return (
                   <div key={i} className="flex flex-col gap-4">
-                    <div className={cn(
-                      "p-4 rounded-2xl text-center shadow-sm border",
-                      isSameDay(day, new Date()) ? "bg-purple-600 text-white border-purple-400" : "bg-white text-gray-800 border-gray-100"
-                    )}>
+                    <div
+                      onClick={() => { setCurrentDate(day); setViewMode("day"); }}
+                      className={cn(
+                        "p-4 rounded-2xl text-center shadow-sm border cursor-pointer hover:opacity-80 transition-opacity",
+                        isSameDay(day, new Date()) ? "bg-purple-600 text-white border-purple-400" : "bg-white text-gray-800 border-gray-100"
+                      )}
+                    >
                       <p className="text-xs font-bold uppercase opacity-70">{["月", "火", "水", "木", "金", "土", "日"][i] || format(day, "eee", { locale: ja })}</p>
                       <p className="text-2xl font-black">{format(day, "d")}</p>
                     </div>
@@ -354,14 +363,20 @@ function CalendarApp() {
                             onClick={() => {
                               setFormDate(day);
                               setCurrentDate(day);
-                              setViewMode("day");
+                              // Keep viewMode as "week"
                               setIsAddEntryOpen(true);
                             }}
-                            className={cn("p-3 rounded-xl border-l-[4px] shadow-sm bg-white border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors", preset?.color?.replace("bg-", "border-"))}
+                            className={cn("p-3 rounded-xl border-l-[4px] shadow-sm bg-white border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors group relative", preset?.color?.replace("bg-", "border-"))}
                           >
                             <p className="text-[10px] font-black text-gray-400">{entry.startTime} - {entry.endTime}</p>
-                            <p className="text-xs font-bold truncate">{preset?.name}</p>
+                            <p className="text-xs font-bold truncate pr-4">{preset?.name}{entry.workplace ? ` @ ${entry.workplace}` : preset?.workplace ? ` @ ${preset.workplace}` : ""}</p>
                             <p className="text-[10px] font-black text-blue-600">¥{(Math.round((calculateDuration(entry.startTime, entry.endTime) / 60) * (preset?.rate || 0)) + entry.commuting).toLocaleString()}</p>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); deleteEntry(entry.id, e as any); }}
+                              className="absolute top-1 right-1 text-gray-300 hover:text-red-500 md:opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
                           </div>
                         );
                       })}
@@ -420,7 +435,7 @@ function CalendarApp() {
                             <td className="px-8 py-6">
                               <div className="flex items-center gap-3">
                                 <div className={cn("w-3 h-3 rounded-full", preset?.color?.split(" ")[0])} />
-                                <span className="font-bold text-gray-600">{preset?.name}</span>
+                                <span className="font-bold text-gray-600">{preset?.name}{entry.workplace ? ` @ ${entry.workplace}` : preset?.workplace ? ` @ ${preset.workplace}` : ""}</span>
                               </div>
                             </td>
                             <td className="px-8 py-6">
@@ -532,7 +547,7 @@ function CalendarApp() {
                             )}
                           >
                             <span className="opacity-80 flex-shrink-0 tracking-tighter font-medium">{entry.startTime}</span>
-                            <span className="truncate">{preset?.name}</span>
+                            <span className="truncate">{preset?.name}{entry.workplace ? ` @ ${entry.workplace}` : preset?.workplace ? ` @ ${preset.workplace}` : ""}</span>
                           </div>
                         );
                       })}
@@ -604,7 +619,7 @@ function CalendarApp() {
             </Popover>
 
             <div className="hidden md:block">
-              <Button variant="secondary" size="icon" className="h-10 w-12 bg-gray-100/50 rounded-md">
+              <Button variant="secondary" size="icon" className="h-10 w-12 bg-gray-100/50 rounded-md" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
                 <Menu className="h-6 w-6 text-gray-600" />
               </Button>
             </div>
@@ -629,7 +644,11 @@ function CalendarApp() {
             "fixed right-4 z-[60] h-14 w-14 bg-zinc-900 text-white rounded-full shadow-2xl transition-transform duration-300 md:hidden flex items-center justify-center cursor-grab active:cursor-grabbing active:scale-95",
             isSidebarOpen ? "rotate-90 bg-white text-zinc-900" : "rotate-0"
           )}
-          onClick={() => !isDragging && setIsSidebarOpen(!isSidebarOpen)}
+          onClick={(e) => {
+            if (!isDragging) {
+              setIsSidebarOpen(!isSidebarOpen);
+            }
+          }}
         >
           <Menu className="h-7 w-7" />
         </Button>
@@ -653,7 +672,7 @@ function CalendarApp() {
       )}>
         {/* Draggable Toggle Handle for Mobile & PC */}
         <button
-          onClick={() => !isDragging && setIsSidebarOpen(!isSidebarOpen)}
+          onClick={() => { if (!isDragging) setIsSidebarOpen(!isSidebarOpen); }}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
@@ -777,6 +796,7 @@ function CalendarApp() {
                               setFormPresetId(entry.presetId);
                               setFormCommuting(entry.commuting);
                               setFormCommPresetId(entry.commutingPresetId || "");
+                              setFormWorkplace(entry.workplace || "");
                               const start = parse(entry.startTime, "HH:mm", new Date());
                               const end = parse(entry.endTime, "HH:mm", new Date());
                               let diff = differenceInMinutes(end, start);
@@ -858,8 +878,25 @@ function CalendarApp() {
                 </div>
               </div>
               <div className="space-y-2">
+                <Label className="text-xs font-bold text-gray-500 ml-1">勤務先 / 備考 (@の後に表示されます)</Label>
+                <div className="relative">
+                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-300" />
+                  <Input
+                    value={formWorkplace}
+                    onChange={(e) => setFormWorkplace(e.target.value)}
+                    placeholder="例: 文京区, 本社など"
+                    className="pl-12 h-14 rounded-2xl text-xl font-black bg-gray-50 border-none shadow-inner"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
                 <Label className="text-xs font-bold text-gray-500 ml-1">勤務先 / 時給プリセット</Label>
-                <Select value={formPresetId} onValueChange={setFormPresetId}>
+                <Select value={formPresetId} onValueChange={(val) => {
+                  setFormPresetId(val);
+                  const p = presets.find(x => x.id === val);
+                  if (p && !formWorkplace) setFormWorkplace(p.workplace || "");
+                }}>
                   <SelectTrigger className="h-14 rounded-2xl text-lg font-bold bg-gray-50 border-none shadow-inner px-5">
                     <SelectValue />
                   </SelectTrigger>
@@ -908,7 +945,8 @@ function CalendarApp() {
                   endTime: formEnd,
                   presetId: formPresetId,
                   commuting: formCommuting,
-                  commutingPresetId: formCommPresetId
+                  commutingPresetId: formCommPresetId,
+                  workplace: formWorkplace
                 };
                 setEntries(prev => [...prev, newEntry]);
                 setIsAddEntryOpen(false);
