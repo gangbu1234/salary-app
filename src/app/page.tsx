@@ -200,6 +200,7 @@ function CalendarApp() {
   const [dragStartY, setDragStartY] = useState(0);
   const [dragStartToggleY, setDragStartToggleY] = useState(0);
   const [durationMinutes, setDurationMinutes] = useState(180); // Default 3 hours
+  const [isCopying, setIsCopying] = useState(false);
 
   // Update endTime when startTime or duration changes
   useEffect(() => {
@@ -229,6 +230,7 @@ function CalendarApp() {
 
   // Drag logic for mobile toggle
   const handleTouchStart = (e: React.TouchEvent) => {
+    // Prevent scrolling while dragging the handle
     setIsDragging(true);
     setDragStartY(e.touches[0].clientY);
     setDragStartToggleY(togglePos.y);
@@ -236,8 +238,10 @@ function CalendarApp() {
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isDragging) return;
+    // We cannot reliably call preventDefault in passive listeners, 
+    // but touch-action: none on the element will handle it.
     const deltaY = e.touches[0].clientY - dragStartY;
-    const newY = Math.max(0, Math.min(window.innerHeight - 60, dragStartToggleY + deltaY));
+    const newY = Math.max(0, Math.min(window.innerHeight - 80, dragStartToggleY + deltaY));
     setTogglePos({ y: newY });
   };
 
@@ -345,7 +349,16 @@ function CalendarApp() {
                       {dailyEntries.map(entry => {
                         const preset = presets.find(p => p.id === entry.presetId);
                         return (
-                          <div key={entry.id} className={cn("p-3 rounded-xl border-l-[4px] shadow-sm bg-white border-gray-100", preset?.color?.replace("bg-", "border-"))}>
+                          <div
+                            key={entry.id}
+                            onClick={() => {
+                              setFormDate(day);
+                              setCurrentDate(day);
+                              setViewMode("day");
+                              setIsAddEntryOpen(true);
+                            }}
+                            className={cn("p-3 rounded-xl border-l-[4px] shadow-sm bg-white border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors", preset?.color?.replace("bg-", "border-"))}
+                          >
                             <p className="text-[10px] font-black text-gray-400">{entry.startTime} - {entry.endTime}</p>
                             <p className="text-xs font-bold truncate">{preset?.name}</p>
                             <p className="text-[10px] font-black text-blue-600">¥{(Math.round((calculateDuration(entry.startTime, entry.endTime) / 60) * (preset?.rate || 0)) + entry.commuting).toLocaleString()}</p>
@@ -611,7 +624,7 @@ function CalendarApp() {
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
-          style={{ top: `${togglePos.y}px` }}
+          style={{ top: `${togglePos.y}px`, touchAction: 'none' }}
           className={cn(
             "fixed right-4 z-[60] h-14 w-14 bg-zinc-900 text-white rounded-full shadow-2xl transition-transform duration-300 md:hidden flex items-center justify-center cursor-grab active:cursor-grabbing active:scale-95",
             isSidebarOpen ? "rotate-90 bg-white text-zinc-900" : "rotate-0"
@@ -648,7 +661,7 @@ function CalendarApp() {
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
-          style={{ top: `${togglePos.y}px` }}
+          style={{ top: `${togglePos.y}px`, touchAction: 'none' }}
           className="absolute left-[-40px] w-10 h-14 bg-[#444] rounded-l-xl flex items-center justify-center md:hidden shadow-[-4px_0_10px_rgba(0,0,0,0.1)] transition-transform active:scale-95 z-50 pointer-events-auto cursor-grab active:cursor-grabbing"
         >
           {isSidebarOpen ? <ChevronRight className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -764,13 +777,12 @@ function CalendarApp() {
                               setFormPresetId(entry.presetId);
                               setFormCommuting(entry.commuting);
                               setFormCommPresetId(entry.commutingPresetId || "");
-                              // Auto calculate duration for the UI
                               const start = parse(entry.startTime, "HH:mm", new Date());
                               const end = parse(entry.endTime, "HH:mm", new Date());
                               let diff = differenceInMinutes(end, start);
                               if (diff < 0) diff += 24 * 60;
                               setDurationMinutes(diff);
-                              // Scroll form into view if needed (implicitly done by UI)
+                              setIsCopying(true);
                             }}
                             className="rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
                           >
@@ -795,8 +807,25 @@ function CalendarApp() {
             <hr className="border-gray-100" />
 
             {/* New Entry Form */}
-            <div className="space-y-6">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">新規登録</p>
+            <div className={cn("space-y-6 p-6 rounded-[1.5rem] border-2 transition-all", isCopying ? "bg-blue-50/50 border-blue-200 border-dashed" : "border-transparent")}>
+              <div className="flex items-center justify-between pl-1">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{isCopying ? "コピー中..." : "新規登録"}</p>
+                {isCopying && <Button variant="ghost" size="sm" onClick={() => setIsCopying(false)} className="h-6 text-[10px] text-blue-500 font-bold hover:bg-blue-100">キャンセル</Button>}
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-gray-500 ml-1">日付</Label>
+                <div className="relative">
+                  <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-300" />
+                  <input
+                    type="date"
+                    value={format(formDate, "yyyy-MM-dd")}
+                    onChange={(e) => setFormDate(new Date(e.target.value))}
+                    className="w-full rounded-2xl h-14 text-xl font-black bg-gray-50 border-none shadow-inner pl-12 pr-4 focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs font-bold text-gray-500 ml-1">開始時間</Label>
@@ -883,8 +912,9 @@ function CalendarApp() {
                 };
                 setEntries(prev => [...prev, newEntry]);
                 setIsAddEntryOpen(false);
+                setIsCopying(false);
               }} className="w-full h-16 bg-zinc-900 hover:bg-black text-white rounded-[1.25rem] font-black text-xl shadow-xl transition-all active:scale-95">
-                記録を追加
+                {isCopying ? "記録を貼り付け（追加）" : "記録を追加"}
               </Button>
             </div>
           </div>
