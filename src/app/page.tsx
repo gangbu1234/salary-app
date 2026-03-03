@@ -123,6 +123,23 @@ export default function CalendarAppWrapper() {
 }
 
 function CalendarApp() {
+  // --- Helpers (Hoisted or defined before use) ---
+  function calculateDuration(start: string, end: string) {
+    try {
+      const startTimeDate = parse(start, "HH:mm", new Date());
+      const endTimeDate = parse(end, "HH:mm", new Date());
+      let diff = differenceInMinutes(endTimeDate, startTimeDate);
+      if (diff < 0) diff += 24 * 60;
+      return diff;
+    } catch {
+      return 0;
+    }
+  }
+
+  function getDailyEntries(day: Date) {
+    return entries.filter(ent => isSameDay(new Date(ent.date), day));
+  }
+
   // --- State ---
   const [currentDate, setCurrentDate] = useState(new Date(2026, 2, 3)); // March 2026 as per screenshot
   const [viewMode, setViewMode] = useState<"day" | "week" | "month" | "year" | "list">("month");
@@ -219,24 +236,6 @@ function CalendarApp() {
   const deleteEntry = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setEntries(entries.filter(ent => ent.id !== id));
-  };
-
-  // --- Render Helpers ---
-  const getDailyEntries = (day: Date) => {
-    return entries.filter(ent => isSameDay(new Date(ent.date), day));
-  };
-
-  // 勤務時間の計算
-  const calculateDuration = (start: string, end: string) => {
-    try {
-      const startTimeDate = parse(start, "HH:mm", new Date());
-      const endTimeDate = parse(end, "HH:mm", new Date());
-      let diff = differenceInMinutes(endTimeDate, startTimeDate);
-      if (diff < 0) diff += 24 * 60;
-      return diff;
-    } catch {
-      return 0;
-    }
   };
 
   // --- Main Render Branching ---
