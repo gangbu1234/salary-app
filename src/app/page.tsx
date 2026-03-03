@@ -546,18 +546,7 @@ function CalendarApp() {
           </div>
         </header>
 
-        {/* Floating Toggle Button for Mobile */}
-        <Button
-          variant="secondary"
-          size="icon"
-          className={cn(
-            "fixed top-4 right-4 z-[60] h-12 w-12 bg-zinc-800 text-white rounded-full shadow-2xl transition-all duration-300 md:hidden flex items-center justify-center",
-            isSidebarOpen ? "rotate-90 bg-white text-zinc-800" : "rotate-0"
-          )}
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        >
-          <Menu className="h-6 w-6" />
-        </Button>
+
 
         {renderMainContent()}
       </div>
@@ -576,7 +565,7 @@ function CalendarApp() {
         "fixed inset-y-0 right-0 z-50 w-24 bg-[#444] flex flex-col items-center py-6 gap-6 text-white overflow-y-auto transition-transform duration-300 ease-in-out md:relative md:translate-x-0 md:flex md:w-[88px]",
         isSidebarOpen ? "translate-x-0" : "translate-x-full md:translate-x-0"
       )}>
-        {/* Draggable Toggle Handle for Mobile */}
+        {/* Draggable Toggle Handle for Mobile & PC */}
         <button
           onClick={() => !isDragging && setIsSidebarOpen(!isSidebarOpen)}
           onTouchStart={() => setIsDragging(true)}
@@ -586,8 +575,17 @@ function CalendarApp() {
             const newY = Math.max(0, Math.min(window.innerHeight - 48, touch.clientY - 24));
             setTogglePos({ y: newY });
           }}
+          onMouseDown={() => setIsDragging(true)}
+          onMouseMove={(e) => {
+            if (isDragging) {
+              const newY = Math.max(0, Math.min(window.innerHeight - 48, e.clientY - 24));
+              setTogglePos({ y: newY });
+            }
+          }}
+          onMouseUp={() => setTimeout(() => setIsDragging(false), 50)}
+          onMouseLeave={() => setIsDragging(false)}
           style={{ top: `${togglePos.y}px` }}
-          className="absolute left-[-40px] w-10 h-12 bg-[#444] rounded-l-xl flex items-center justify-center md:hidden shadow-[-4px_0_10px_rgba(0,0,0,0.1)] transition-transform active:scale-95 z-50 pointer-events-auto"
+          className="absolute left-[-40px] w-10 h-12 bg-[#444] rounded-l-xl flex items-center justify-center md:hidden shadow-[-4px_0_10px_rgba(0,0,0,0.1)] transition-transform active:scale-95 z-50 pointer-events-auto cursor-grab active:cursor-grabbing"
         >
           {isSidebarOpen ? <ChevronRight className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
