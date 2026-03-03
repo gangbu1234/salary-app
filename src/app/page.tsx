@@ -195,8 +195,10 @@ function CalendarApp() {
   const [formCommPresetId, setFormCommPresetId] = useState<string>("c2");
   const [formCommuting, setFormCommuting] = useState(1200);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [togglePos, setTogglePos] = useState({ y: 16 });
+  const [togglePos, setTogglePos] = useState({ y: 80 }); // Moved down a bit from top
   const [isDragging, setIsDragging] = useState(false);
+  const [dragStartY, setDragStartY] = useState(0);
+  const [dragStartToggleY, setDragStartToggleY] = useState(0);
   const [durationMinutes, setDurationMinutes] = useState(180); // Default 3 hours
 
   // Update endTime when startTime or duration changes
@@ -226,11 +228,38 @@ function CalendarApp() {
   }, []);
 
   // Drag logic for mobile toggle
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setIsDragging(true);
+    setDragStartY(e.touches[0].clientY);
+    setDragStartToggleY(togglePos.y);
+  };
+
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isDragging) return;
-    const touch = e.touches[0];
-    const newY = Math.max(0, Math.min(window.innerHeight - 48, touch.clientY - 24));
+    const deltaY = e.touches[0].clientY - dragStartY;
+    const newY = Math.max(0, Math.min(window.innerHeight - 60, dragStartToggleY + deltaY));
     setTogglePos({ y: newY });
+  };
+
+  const handleTouchEnd = () => {
+    setTimeout(() => setIsDragging(false), 50);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setDragStartY(e.clientY);
+    setDragStartToggleY(togglePos.y);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    const deltaY = e.clientY - dragStartY;
+    const newY = Math.max(0, Math.min(window.innerHeight - 60, dragStartToggleY + deltaY));
+    setTogglePos({ y: newY });
+  };
+
+  const handleMouseUp = () => {
+    setTimeout(() => setIsDragging(false), 50);
   };
 
   // --- Logic ---
@@ -571,17 +600,25 @@ function CalendarApp() {
 
 
 
-        {/* Re-restored mobile menu button for easier access */}
+        {/* Floating Draggable Hamburger for Mobile */}
         <Button
           variant="secondary"
           size="icon"
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={() => setIsDragging(false)}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          style={{ top: `${togglePos.y}px` }}
           className={cn(
-            "fixed top-4 right-4 z-[60] h-12 w-12 bg-zinc-800 text-white rounded-full shadow-2xl transition-all duration-300 md:hidden flex items-center justify-center",
-            isSidebarOpen ? "rotate-90 bg-white text-zinc-800" : "rotate-0"
+            "fixed right-4 z-[60] h-14 w-14 bg-zinc-900 text-white rounded-full shadow-2xl transition-transform duration-300 md:hidden flex items-center justify-center cursor-grab active:cursor-grabbing active:scale-95",
+            isSidebarOpen ? "rotate-90 bg-white text-zinc-900" : "rotate-0"
           )}
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          onClick={() => !isDragging && setIsSidebarOpen(!isSidebarOpen)}
         >
-          <Menu className="h-6 w-6" />
+          <Menu className="h-7 w-7" />
         </Button>
 
         {renderMainContent()}
@@ -604,24 +641,15 @@ function CalendarApp() {
         {/* Draggable Toggle Handle for Mobile & PC */}
         <button
           onClick={() => !isDragging && setIsSidebarOpen(!isSidebarOpen)}
-          onTouchStart={() => setIsDragging(true)}
-          onTouchEnd={() => setTimeout(() => setIsDragging(false), 50)}
-          onTouchMove={(e) => {
-            const touch = e.touches[0];
-            const newY = Math.max(0, Math.min(window.innerHeight - 48, touch.clientY - 24));
-            setTogglePos({ y: newY });
-          }}
-          onMouseDown={() => setIsDragging(true)}
-          onMouseMove={(e) => {
-            if (isDragging) {
-              const newY = Math.max(0, Math.min(window.innerHeight - 48, e.clientY - 24));
-              setTogglePos({ y: newY });
-            }
-          }}
-          onMouseUp={() => setTimeout(() => setIsDragging(false), 50)}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
           onMouseLeave={() => setIsDragging(false)}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
           style={{ top: `${togglePos.y}px` }}
-          className="absolute left-[-40px] w-10 h-12 bg-[#444] rounded-l-xl flex items-center justify-center md:hidden shadow-[-4px_0_10px_rgba(0,0,0,0.1)] transition-transform active:scale-95 z-50 pointer-events-auto cursor-grab active:cursor-grabbing"
+          className="absolute left-[-40px] w-10 h-14 bg-[#444] rounded-l-xl flex items-center justify-center md:hidden shadow-[-4px_0_10px_rgba(0,0,0,0.1)] transition-transform active:scale-95 z-50 pointer-events-auto cursor-grab active:cursor-grabbing"
         >
           {isSidebarOpen ? <ChevronRight className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
@@ -731,10 +759,20 @@ function CalendarApp() {
                             size="icon"
                             onClick={(e) => {
                               e.stopPropagation();
-                              const copy = { ...entry, id: Math.random().toString(36).substr(2, 9) };
-                              setEntries([...entries, copy]);
+                              setFormStart(entry.startTime);
+                              setFormEnd(entry.endTime);
+                              setFormPresetId(entry.presetId);
+                              setFormCommuting(entry.commuting);
+                              setFormCommPresetId(entry.commutingPresetId || "");
+                              // Auto calculate duration for the UI
+                              const start = parse(entry.startTime, "HH:mm", new Date());
+                              const end = parse(entry.endTime, "HH:mm", new Date());
+                              let diff = differenceInMinutes(end, start);
+                              if (diff < 0) diff += 24 * 60;
+                              setDurationMinutes(diff);
+                              // Scroll form into view if needed (implicitly done by UI)
                             }}
-                            className="rounded-full text-gray-300 hover:text-blue-500 hover:bg-blue-50 transition-all"
+                            className="rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
                           >
                             <Copy className="h-5 w-5" />
                           </Button>
