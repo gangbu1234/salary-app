@@ -84,7 +84,45 @@ const PRESET_COLORS = [
   "bg-orange-500 text-white",
 ];
 
-export default function CalendarApp() {
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-10 bg-red-50 text-red-900 overflow-auto h-screen">
+          <h1 className="text-2xl font-bold mb-4">予期しないエラーが発生しました</h1>
+          <pre className="p-4 bg-white border border-red-200 rounded-lg text-xs">
+            {this.state.error?.toString()}
+            {"\n\n"}
+            {this.state.error?.stack}
+          </pre>
+          <Button onClick={() => window.location.reload()} className="mt-4 bg-red-600">
+            アプリを再読み込み
+          </Button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export default function CalendarAppWrapper() {
+  return (
+    <ErrorBoundary>
+      <CalendarApp />
+    </ErrorBoundary>
+  );
+}
+
+function CalendarApp() {
   // --- State ---
   const [currentDate, setCurrentDate] = useState(new Date(2026, 2, 3)); // March 2026 as per screenshot
   const [viewMode, setViewMode] = useState<"day" | "week" | "month" | "year" | "list">("month");
