@@ -178,19 +178,6 @@ export default function CalendarApp() {
 
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
-  const addEntry = () => {
-    const newEntry: WorkEntry = {
-      id: Math.random().toString(36).substr(2, 9),
-      date: formDate.toISOString(),
-      startTime: formStart,
-      endTime: formEnd,
-      presetId: formPresetId,
-      commuting: formCommuting,
-    };
-    setEntries([...entries, newEntry]);
-    setIsAddEntryOpen(false);
-  };
-
   const deleteEntry = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setEntries(entries.filter(ent => ent.id !== id));
@@ -764,7 +751,7 @@ export default function CalendarApp() {
                   commuting: formCommuting,
                   commutingPresetId: formCommPresetId
                 };
-                setEntries([...entries, newEntry]);
+                setEntries(prev => [...prev, newEntry]);
                 setIsAddEntryOpen(false);
               }} className="w-full h-16 bg-zinc-900 hover:bg-black text-white rounded-[1.25rem] font-black text-xl shadow-xl transition-all active:scale-95">
                 記録を追加
