@@ -138,6 +138,7 @@ export default function CalendarApp() {
   const [formPresetId, setFormPresetId] = useState("1");
   const [formCommPresetId, setFormCommPresetId] = useState<string>("c2");
   const [formCommuting, setFormCommuting] = useState(1200);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // --- Logic ---
   useEffect(() => {
@@ -246,7 +247,7 @@ export default function CalendarApp() {
                       "p-4 rounded-2xl text-center shadow-sm border",
                       isSameDay(day, new Date()) ? "bg-purple-600 text-white border-purple-400" : "bg-white text-gray-800 border-gray-100"
                     )}>
-                      <p className="text-xs font-bold uppercase opacity-70">{format(day, "eee", { locale: ja })}</p>
+                      <p className="text-xs font-bold uppercase opacity-70">{["月", "火", "水", "木", "金", "土", "日"][i] || format(day, "eee", { locale: ja })}</p>
                       <p className="text-2xl font-black">{format(day, "d")}</p>
                     </div>
                     <div className="flex-1 space-y-3">
@@ -366,15 +367,19 @@ export default function CalendarApp() {
         return (
           <>
             {/* Weekday Headers */}
-            <div className="grid grid-cols-7 border-b border-gray-100 bg-gray-50/30">
-              {["月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日", "日曜日"].map((day, idx) => (
-                <div key={day} className={cn(
-                  "py-1 text-center text-sm font-medium text-gray-500 border-r border-gray-100 last:border-r-0",
-                  idx >= 5 && "text-gray-400"
-                )}>
-                  {day}
-                </div>
-              ))}
+            <div className="grid grid-cols-7 border-b-2 border-gray-900 bg-white">
+              {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((dayEn, idx) => {
+                const dayJa = ["月", "火", "水", "木", "金", "土", "日"][idx];
+                return (
+                  <div key={dayEn} className={cn(
+                    "py-1 text-center text-[10px] md:text-sm font-black border-r border-gray-100 last:border-r-0",
+                    idx === 5 ? "text-blue-600" : idx === 6 ? "text-rose-600" : "text-gray-900"
+                  )}>
+                    <span className="md:hidden">{dayJa}</span>
+                    <span className="hidden md:inline">{dayEn}</span>
+                  </div>
+                );
+              })}
             </div>
 
             {/* Calendar Grid */}
@@ -445,11 +450,13 @@ export default function CalendarApp() {
         {/* Header */}
         <header className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div className="flex items-baseline gap-4">
-            <h1 className="text-5xl font-light text-gray-700 leading-none">
-              {viewMode === "year" ? format(currentDate, "yyyy年") : format(currentDate, "M月", { locale: ja })}
-              {viewMode !== "year" && <span className="text-4xl text-gray-400 ml-2">{format(currentDate, "yyyy")}</span>}
+            <h1 className="text-3xl md:text-5xl font-light text-gray-700 leading-none flex items-baseline">
+              <span className="truncate max-w-[120px] md:max-w-none">
+                {viewMode === "year" ? format(currentDate, "yyyy年") : format(currentDate, "M月", { locale: ja })}
+              </span>
+              {viewMode !== "year" && <span className="text-xl md:text-4xl text-gray-400 ml-2">{format(currentDate, "yyyy")}</span>}
             </h1>
-            <div className="flex items-center gap-1 ml-4">
+            <div className="flex items-center gap-1 ml-4 scale-75 md:scale-100 origin-left">
               <Button variant="ghost" size="icon" onClick={() => setCurrentDate(viewMode === "year" ? subYears(currentDate, 1) : subMonths(currentDate, 1))}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -492,43 +499,96 @@ export default function CalendarApp() {
               </PopoverContent>
             </Popover>
 
-            <Button variant="secondary" size="icon" className="h-10 w-12 bg-gray-100/50 rounded-md">
-              <Menu className="h-6 w-6 text-gray-600" />
-            </Button>
+            <div className="hidden md:block">
+              <Button variant="secondary" size="icon" className="h-10 w-12 bg-gray-100/50 rounded-md">
+                <Menu className="h-6 w-6 text-gray-600" />
+              </Button>
+            </div>
           </div>
         </header>
+
+        {/* Floating Toggle Button for Mobile */}
+        <Button
+          variant="secondary"
+          size="icon"
+          className={cn(
+            "fixed top-4 right-4 z-[60] h-12 w-12 bg-zinc-800 text-white rounded-full shadow-2xl transition-all duration-300 md:hidden flex items-center justify-center",
+            isSidebarOpen ? "rotate-90 bg-white text-zinc-800" : "rotate-0"
+          )}
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+        >
+          <Menu className="h-6 w-6" />
+        </Button>
 
         {renderMainContent()}
       </div>
 
       {/* --- Right Navigation Sidebar --- */}
-      <aside className="w-[88px] bg-[#666] flex flex-col items-center py-6 gap-6 text-white overflow-y-auto">
+      {/* --- Overlay for Sidebar on Mobile --- */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      {/* --- Right Navigation Sidebar --- */}
+      <aside className={cn(
+        "fixed inset-y-0 right-0 z-50 w-24 bg-[#444] flex flex-col items-center py-6 gap-6 text-white overflow-y-auto transition-transform duration-300 ease-in-out md:relative md:translate-x-0 md:flex md:w-[88px]",
+        isSidebarOpen ? "translate-x-0" : "translate-x-full md:translate-x-0"
+      )}>
+        {/* Toggle Handle for Mobile */}
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="absolute left-[-40px] top-4 w-10 h-12 bg-[#444] rounded-l-xl flex items-center justify-center md:hidden shadow-[-4px_0_10px_rgba(0,0,0,0.1)] transition-all active:scale-95"
+        >
+          {isSidebarOpen ? <ChevronRight className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        </button>
+
         <button className="flex flex-col items-center gap-1 opacity-80 hover:opacity-100 transition-opacity">
           <Search className="h-7 w-7" />
           <span className="text-[11px] font-medium tracking-tighter">検索</span>
         </button>
-        <button className={cn("flex flex-col items-center gap-1 transition-all", viewMode === "day" ? "opacity-100 scale-110" : "opacity-80 hover:opacity-100")} onClick={() => setViewMode("day")}>
+        <button
+          className={cn("flex flex-col items-center gap-1 transition-all", viewMode === "day" ? "opacity-100 scale-110" : "opacity-80 hover:opacity-100")}
+          onClick={() => { setViewMode("day"); setIsSidebarOpen(false); }}
+        >
           <Sun className="h-7 w-7" />
           <span className="text-[11px] font-medium tracking-tighter">日</span>
         </button>
-        <button className={cn("flex flex-col items-center gap-1 transition-all", viewMode === "week" ? "opacity-100 scale-110" : "opacity-80 hover:opacity-100")} onClick={() => setViewMode("week")}>
+        <button
+          className={cn("flex flex-col items-center gap-1 transition-all", viewMode === "week" ? "opacity-100 scale-110" : "opacity-80 hover:opacity-100")}
+          onClick={() => { setViewMode("week"); setIsSidebarOpen(false); }}
+        >
           <ColumnsIcon className="h-7 w-7" />
           <span className="text-[11px] font-medium tracking-tighter">週</span>
         </button>
-        <button className={cn("flex flex-col items-center gap-1 transition-all", viewMode === "month" ? "opacity-100 scale-110" : "opacity-80 hover:opacity-100")} onClick={() => setViewMode("month")}>
+        <button
+          className={cn("flex flex-col items-center gap-1 transition-all", viewMode === "month" ? "opacity-100 scale-110" : "opacity-80 hover:opacity-100")}
+          onClick={() => { setViewMode("month"); setIsSidebarOpen(false); }}
+        >
           <Grid className="h-7 w-7" />
           <span className="text-[11px] font-bold tracking-tighter">月</span>
         </button>
-        <button className={cn("flex flex-col items-center gap-1 transition-all", viewMode === "year" ? "opacity-100 scale-110" : "opacity-80 hover:opacity-100")} onClick={() => setViewMode("year")}>
+        <button
+          className={cn("flex flex-col items-center gap-1 transition-all", viewMode === "year" ? "opacity-100 scale-110" : "opacity-80 hover:opacity-100")}
+          onClick={() => { setViewMode("year"); setIsSidebarOpen(false); }}
+        >
           <CalendarDays className="h-7 w-7" />
           <span className="text-[11px] font-medium tracking-tighter">年</span>
         </button>
-        <button className={cn("flex flex-col items-center gap-1 transition-all", viewMode === "list" ? "opacity-100 scale-110" : "opacity-80 hover:opacity-100")} onClick={() => setViewMode("list")}>
+        <button
+          className={cn("flex flex-col items-center gap-1 transition-all", viewMode === "list" ? "opacity-100 scale-110" : "opacity-80 hover:opacity-100")}
+          onClick={() => { setViewMode("list"); setIsSidebarOpen(false); }}
+        >
           <List className="h-7 w-7" />
           <span className="text-[11px] font-medium tracking-tighter">リスト表示</span>
         </button>
         <hr className="w-8 border-gray-500 opacity-30 my-2" />
-        <button className="flex flex-col items-center gap-1 opacity-80 hover:opacity-100 transition-opacity" onClick={() => { setCurrentDate(new Date()); setViewMode("month"); }}>
+        <button
+          className="flex flex-col items-center gap-1 opacity-80 hover:opacity-100 transition-opacity"
+          onClick={() => { setCurrentDate(new Date()); setViewMode("month"); setIsSidebarOpen(false); }}
+        >
           <CalendarIcon className="h-7 w-7" />
           <span className="text-[11px] font-medium tracking-tighter">本日</span>
         </button>
@@ -546,7 +606,7 @@ export default function CalendarApp() {
         </button>
         <button
           className="flex flex-col items-center gap-1 opacity-80 hover:opacity-100 transition-opacity mt-auto"
-          onClick={() => setIsSettingsOpen(true)}
+          onClick={() => { setIsSettingsOpen(true); setIsSidebarOpen(false); }}
         >
           <Settings className="h-7 w-7" />
           <span className="text-[11px] font-medium tracking-tighter">設定</span>
