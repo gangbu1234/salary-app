@@ -317,7 +317,10 @@ function CalendarApp() {
                       <div className={cn("w-4 h-16 rounded-full", preset?.color?.split(" ")[0])} />
                       <div>
                         <p className="text-3xl font-black tracking-tighter">{entry.startTime} - {entry.endTime} <span className="text-gray-300 ml-2">({(minutes / 60).toFixed(1)}h)</span></p>
-                        <p className="text-lg font-bold text-gray-400">{preset?.name}{entry.workplace ? ` @ ${entry.workplace}` : preset?.workplace ? ` @ ${preset.workplace}` : ""}</p>
+                        <p className="text-lg font-bold text-gray-400">
+                          {entry.workplace || preset?.workplace ? `${entry.workplace || preset?.workplace} @ ` : ""}
+                          {preset?.name}
+                        </p>
                       </div>
                     </div>
                     <div className="text-right">
@@ -369,7 +372,10 @@ function CalendarApp() {
                             className={cn("p-3 rounded-xl border-l-[4px] shadow-sm bg-white border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors group relative", preset?.color?.replace("bg-", "border-"))}
                           >
                             <p className="text-[10px] font-black text-gray-400">{entry.startTime} - {entry.endTime}</p>
-                            <p className="text-xs font-bold truncate pr-4">{preset?.name}{entry.workplace ? ` @ ${entry.workplace}` : preset?.workplace ? ` @ ${preset.workplace}` : ""}</p>
+                            <p className="text-xs font-bold truncate pr-4">
+                              {entry.workplace || preset?.workplace ? `${entry.workplace || preset?.workplace} @ ` : ""}
+                              {preset?.name}
+                            </p>
                             <p className="text-[10px] font-black text-blue-600">¥{(Math.round((calculateDuration(entry.startTime, entry.endTime) / 60) * (preset?.rate || 0)) + entry.commuting).toLocaleString()}</p>
                             <button
                               onClick={(e) => { e.stopPropagation(); deleteEntry(entry.id, e as any); }}
@@ -435,7 +441,10 @@ function CalendarApp() {
                             <td className="px-8 py-6">
                               <div className="flex items-center gap-3">
                                 <div className={cn("w-3 h-3 rounded-full", preset?.color?.split(" ")[0])} />
-                                <span className="font-bold text-gray-600">{preset?.name}{entry.workplace ? ` @ ${entry.workplace}` : preset?.workplace ? ` @ ${preset.workplace}` : ""}</span>
+                                <span className="font-bold text-gray-600">
+                                  {entry.workplace || preset?.workplace ? `${entry.workplace || preset?.workplace} @ ` : ""}
+                                  {preset?.name}
+                                </span>
                               </div>
                             </td>
                             <td className="px-8 py-6">
@@ -516,10 +525,8 @@ function CalendarApp() {
                       isSameDay(day, new Date()) && "bg-blue-50/20"
                     )}
                     onClick={() => {
-                      setFormDate(day);
                       setCurrentDate(day);
                       setViewMode("day");
-                      setIsAddEntryOpen(true);
                     }}
                   >
                     <div className="flex items-center justify-between px-2 pt-1 font-sans">
@@ -541,13 +548,30 @@ function CalendarApp() {
                         return (
                           <div
                             key={entry.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFormDate(day);
+                              setCurrentDate(day);
+                              setIsAddEntryOpen(true);
+                            }}
                             className={cn(
-                              "px-2 py-[2px] rounded-[2px] text-[10px] font-bold leading-none truncate shadow-sm flex items-center gap-1.5 border-l-[3px] border-black/10",
+                              "px-2 py-[4px] rounded-[3px] text-[10px] font-bold leading-none truncate shadow-sm flex items-center justify-between gap-1.5 border-l-[3px] border-black/10 transition-transform active:scale-95 group/entry",
                               preset?.color || "bg-gray-200"
                             )}
                           >
-                            <span className="opacity-80 flex-shrink-0 tracking-tighter font-medium">{entry.startTime}</span>
-                            <span className="truncate">{preset?.name}{entry.workplace ? ` @ ${entry.workplace}` : preset?.workplace ? ` @ ${preset.workplace}` : ""}</span>
+                            <div className="flex items-center gap-1 overflow-hidden">
+                              <span className="opacity-80 flex-shrink-0 tracking-tighter font-medium">{entry.startTime}</span>
+                              <span className="truncate">
+                                {entry.workplace || preset?.workplace ? `${entry.workplace || preset?.workplace} @ ` : ""}
+                                {preset?.name}
+                              </span>
+                            </div>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); deleteEntry(entry.id, e as any); }}
+                              className="text-white/40 hover:text-white/100 lg:opacity-0 lg:group-hover/entry:opacity-100 transition-opacity flex-shrink-0 p-[2px]"
+                            >
+                              <Trash2 className="h-2.5 w-2.5" />
+                            </button>
                           </div>
                         );
                       })}
