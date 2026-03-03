@@ -16,6 +16,7 @@ import {
   isSameMonth,
   isSameDay,
   addDays,
+  addMinutes,
   parse
 } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -196,6 +197,28 @@ function CalendarApp() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [togglePos, setTogglePos] = useState({ y: 16 });
   const [isDragging, setIsDragging] = useState(false);
+  const [durationMinutes, setDurationMinutes] = useState(180); // Default 3 hours
+
+  // Update endTime when startTime or duration changes
+  useEffect(() => {
+    try {
+      const start = parse(formStart, "HH:mm", new Date());
+      const end = addMinutes(start, durationMinutes);
+      setFormEnd(format(end, "HH:mm"));
+    } catch (e) { }
+  }, [formStart, durationMinutes]);
+
+  // Update duration when endTime changes manually
+  const handleEndTimeChange = (val: string) => {
+    setFormEnd(val);
+    try {
+      const start = parse(formStart, "HH:mm", new Date());
+      const end = parse(val, "HH:mm", new Date());
+      let diff = differenceInMinutes(end, start);
+      if (diff < 0) diff += 24 * 60;
+      setDurationMinutes(diff);
+    } catch (e) { }
+  };
 
   // Initialize toggle position after mount to avoid SSR issues
   useEffect(() => {
@@ -548,6 +571,19 @@ function CalendarApp() {
 
 
 
+        {/* Re-restored mobile menu button for easier access */}
+        <Button
+          variant="secondary"
+          size="icon"
+          className={cn(
+            "fixed top-4 right-4 z-[60] h-12 w-12 bg-zinc-800 text-white rounded-full shadow-2xl transition-all duration-300 md:hidden flex items-center justify-center",
+            isSidebarOpen ? "rotate-90 bg-white text-zinc-800" : "rotate-0"
+          )}
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+        >
+          <Menu className="h-6 w-6" />
+        </Button>
+
         {renderMainContent()}
       </div>
 
@@ -730,7 +766,28 @@ function CalendarApp() {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs font-bold text-gray-500 ml-1">終了時間</Label>
-                  <input type="time" value={formEnd} onChange={(e) => setFormEnd(e.target.value)} className="w-full rounded-2xl h-14 text-xl font-black bg-gray-50 border-none shadow-inner px-4 focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <input type="time" value={formEnd} onChange={(e) => handleEndTimeChange(e.target.value)} className="w-full rounded-2xl h-14 text-xl font-black bg-gray-50 border-none shadow-inner px-4 focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-gray-500 ml-1">勤務時間 (分を入力して終了時刻を自動設定)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    value={durationMinutes}
+                    onChange={(e) => setDurationMinutes(Number(e.target.value))}
+                    className="h-14 rounded-2xl text-xl font-black bg-gray-50 border-none shadow-inner"
+                    placeholder="例: 180"
+                  />
+                  <div className="flex items-center text-gray-400 font-bold pr-2">分</div>
+                </div>
+                <div className="flex gap-2 flex-wrap pt-1">
+                  {[30, 60, 90, 120, 180, 240, 300, 360].map(m => (
+                    <Button key={m} variant="outline" size="sm" onClick={() => setDurationMinutes(m)} className="rounded-full text-[10px] h-7 px-3">
+                      {m >= 60 ? `${m / 60}h` : `${m}m`}
+                    </Button>
+                  ))}
                 </div>
               </div>
               <div className="space-y-2">
