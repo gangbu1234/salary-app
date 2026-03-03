@@ -23,7 +23,7 @@ import {
   Plus, Search, Calendar as CalendarIcon, Grid, List,
   Users, Printer, RefreshCw, Settings, Menu, Filter,
   CheckSquare, ChevronLeft, ChevronRight, Calculator,
-  ColumnsIcon, CalendarDays, Sun, MapPin
+  ColumnsIcon, CalendarDays, Sun, MapPin, Copy
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -139,6 +139,16 @@ export default function CalendarApp() {
   const [formCommPresetId, setFormCommPresetId] = useState<string>("c2");
   const [formCommuting, setFormCommuting] = useState(1200);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [togglePos, setTogglePos] = useState({ y: 16 });
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Drag logic for mobile toggle
+  const handleTouchMove = (e: React.TouchEvents) => {
+    if (!isDragging) return;
+    const touch = e.touches[0];
+    const newY = Math.max(0, Math.min(window.innerHeight - 48, touch.clientY - 24));
+    setTogglePos({ y: newY });
+  };
 
   // --- Logic ---
   useEffect(() => {
@@ -537,10 +547,18 @@ export default function CalendarApp() {
         "fixed inset-y-0 right-0 z-50 w-24 bg-[#444] flex flex-col items-center py-6 gap-6 text-white overflow-y-auto transition-transform duration-300 ease-in-out md:relative md:translate-x-0 md:flex md:w-[88px]",
         isSidebarOpen ? "translate-x-0" : "translate-x-full md:translate-x-0"
       )}>
-        {/* Toggle Handle for Mobile */}
+        {/* Draggable Toggle Handle for Mobile */}
         <button
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="absolute left-[-40px] top-4 w-10 h-12 bg-[#444] rounded-l-xl flex items-center justify-center md:hidden shadow-[-4px_0_10px_rgba(0,0,0,0.1)] transition-all active:scale-95"
+          onClick={() => !isDragging && setIsSidebarOpen(!isSidebarOpen)}
+          onTouchStart={() => setIsDragging(true)}
+          onTouchEnd={() => setTimeout(() => setIsDragging(false), 50)}
+          onTouchMove={(e) => {
+            const touch = e.touches[0];
+            const newY = Math.max(0, Math.min(window.innerHeight - 48, touch.clientY - 24));
+            setTogglePos({ y: newY });
+          }}
+          style={{ top: `${togglePos.y}px` }}
+          className="absolute left-[-40px] w-10 h-12 bg-[#444] rounded-l-xl flex items-center justify-center md:hidden shadow-[-4px_0_10px_rgba(0,0,0,0.1)] transition-transform active:scale-95 z-50 pointer-events-auto"
         >
           {isSidebarOpen ? <ChevronRight className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
@@ -644,14 +662,28 @@ export default function CalendarApp() {
                             <p className="text-xs font-bold text-gray-400">{preset?.name}</p>
                           </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => deleteEntry(entry.id, e as any)}
-                          className="rounded-full text-gray-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const copy = { ...entry, id: Math.random().toString(36).substr(2, 9) };
+                              setEntries([...entries, copy]);
+                            }}
+                            className="rounded-full text-gray-300 hover:text-blue-500 hover:bg-blue-50 transition-all"
+                          >
+                            <Copy className="h-5 w-5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => deleteEntry(entry.id, e as any)}
+                            className="rounded-full text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all"
+                          >
+                            <Trash2 className="h-5 w-5" />
+                          </Button>
+                        </div>
                       </div>
                     );
                   })}
