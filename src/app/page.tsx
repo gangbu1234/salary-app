@@ -700,14 +700,25 @@ export default function CalendarApp() {
                   </div>
                 ))}
               </div>
-              <Input placeholder="新しい勤務先名..." className="rounded-xl h-12" onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  const val = (e.target as HTMLInputElement).value;
-                  if (!val) return;
-                  setPresets([...presets, { id: Math.random().toString(), name: val, rate: 3000, color: PRESET_COLORS[presets.length % PRESET_COLORS.length] }]);
-                  (e.target as HTMLInputElement).value = "";
-                }
-              }} />
+              <div className="grid grid-cols-2 gap-2">
+                <Input placeholder="勤務先名" id="newPresetName" className="rounded-xl h-12" />
+                <Input type="number" placeholder="時給額" id="newPresetRate" className="rounded-xl h-12" />
+              </div>
+              <Button className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold" onClick={() => {
+                const n = (document.getElementById('newPresetName') as HTMLInputElement).value;
+                const r = (document.getElementById('newPresetRate') as HTMLInputElement).value;
+                if (!n || !r) return;
+                setPresets([...presets, {
+                  id: Math.random().toString(),
+                  name: n,
+                  rate: Number(r),
+                  color: PRESET_COLORS[presets.length % PRESET_COLORS.length]
+                }]);
+                (document.getElementById('newPresetName') as HTMLInputElement).value = "";
+                (document.getElementById('newPresetRate') as HTMLInputElement).value = "";
+              }}>
+                時給設定を追加
+              </Button>
             </div>
 
             {/* Commuting Presets */}
