@@ -751,12 +751,25 @@ export default function CalendarApp() {
               <p className="text-sm font-black text-blue-600 uppercase tracking-widest pl-1">時給設定</p>
               <div className="space-y-2">
                 {presets.map(p => (
-                  <div key={p.id} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
-                    <div>
-                      <p className="font-bold text-sm tracking-tight">{p.name}</p>
-                      <p className="text-blue-600 font-extrabold">¥{p.rate.toLocaleString()}</p>
+                  <div key={p.id} className="flex flex-col p-4 bg-white rounded-2xl border border-gray-100 shadow-sm gap-2">
+                    <div className="flex items-center justify-between">
+                      <input
+                        className="font-bold text-sm tracking-tight bg-transparent border-none outline-none focus:ring-2 focus:ring-blue-100 rounded px-2 py-1 w-full transition-all"
+                        value={p.name}
+                        onChange={(e) => setPresets(presets.map(x => x.id === p.id ? { ...x, name: e.target.value } : x))}
+                        placeholder="勤務先名"
+                      />
+                      <Button variant="ghost" size="icon" onClick={() => setPresets(presets.filter(x => x.id !== p.id))} className="text-gray-200 hover:text-red-500 flex-shrink-0"><Trash2 className="h-4 w-4" /></Button>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => setPresets(presets.filter(x => x.id !== p.id))} className="text-gray-200 hover:text-red-500"><Trash2 className="h-4 w-4" /></Button>
+                    <div className="flex items-center text-blue-600 font-extrabold gap-1 px-2">
+                      <span className="text-sm">¥</span>
+                      <input
+                        type="number"
+                        className="bg-transparent border-none outline-none focus:ring-2 focus:ring-blue-100 rounded px-1 w-28 text-lg"
+                        value={p.rate}
+                        onChange={(e) => setPresets(presets.map(x => x.id === p.id ? { ...x, rate: Number(e.target.value) } : x))}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -786,12 +799,25 @@ export default function CalendarApp() {
               <p className="text-sm font-black text-emerald-600 uppercase tracking-widest pl-1">交通費設定</p>
               <div className="space-y-2">
                 {commPresets.map(p => (
-                  <div key={p.id} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-200 shadow-sm">
-                    <div>
-                      <p className="font-bold text-sm tracking-tight">{p.name}</p>
-                      <p className="text-emerald-600 font-extrabold">¥{p.amount.toLocaleString()}</p>
+                  <div key={p.id} className="flex flex-col p-4 bg-white rounded-2xl border border-gray-100 shadow-sm gap-2">
+                    <div className="flex items-center justify-between">
+                      <input
+                        className="font-bold text-sm tracking-tight bg-transparent border-none outline-none focus:ring-2 focus:ring-emerald-100 rounded px-2 py-1 w-full transition-all"
+                        value={p.name}
+                        onChange={(e) => setCommPresets(commPresets.map(x => x.id === p.id ? { ...x, name: e.target.value } : x))}
+                        placeholder="名称"
+                      />
+                      <Button variant="ghost" size="icon" onClick={() => setCommPresets(commPresets.filter(x => x.id !== p.id))} className="text-gray-200 hover:text-red-500 flex-shrink-0"><Trash2 className="h-4 w-4" /></Button>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => setCommPresets(commPresets.filter(x => x.id !== p.id))} className="text-gray-200 hover:text-red-500"><Trash2 className="h-4 w-4" /></Button>
+                    <div className="flex items-center text-emerald-600 font-extrabold gap-1 px-2">
+                      <span className="text-sm">¥</span>
+                      <input
+                        type="number"
+                        className="bg-transparent border-none outline-none focus:ring-2 focus:ring-emerald-100 rounded px-1 w-28 text-lg"
+                        value={p.amount}
+                        onChange={(e) => setCommPresets(commPresets.map(x => x.id === p.id ? { ...x, amount: Number(e.target.value) } : x))}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
