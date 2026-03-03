@@ -253,7 +253,7 @@ function CalendarApp() {
                 return (
                   <div key={entry.id} className="flex items-center justify-between p-8 bg-gray-50 rounded-[2.5rem] border border-gray-100 group">
                     <div className="flex items-center gap-6">
-                      <div className={cn("w-4 h-16 rounded-full", preset?.color.split(" ")[0])} />
+                      <div className={cn("w-4 h-16 rounded-full", preset?.color?.split(" ")[0])} />
                       <div>
                         <p className="text-3xl font-black tracking-tighter">{entry.startTime} - {entry.endTime} <span className="text-gray-300 ml-2">({(minutes / 60).toFixed(1)}h)</span></p>
                         <p className="text-lg font-bold text-gray-400">{preset?.name}</p>
@@ -294,7 +294,7 @@ function CalendarApp() {
                       {dailyEntries.map(entry => {
                         const preset = presets.find(p => p.id === entry.presetId);
                         return (
-                          <div key={entry.id} className={cn("p-3 rounded-xl border-l-[4px] shadow-sm bg-white border-gray-100", preset?.color.replace("bg-", "border-"))}>
+                          <div key={entry.id} className={cn("p-3 rounded-xl border-l-[4px] shadow-sm bg-white border-gray-100", preset?.color?.replace("bg-", "border-"))}>
                             <p className="text-[10px] font-black text-gray-400">{entry.startTime} - {entry.endTime}</p>
                             <p className="text-xs font-bold truncate">{preset?.name}</p>
                             <p className="text-[10px] font-black text-blue-600">¥{(Math.round((calculateDuration(entry.startTime, entry.endTime) / 60) * (preset?.rate || 0)) + entry.commuting).toLocaleString()}</p>
@@ -355,7 +355,7 @@ function CalendarApp() {
                             </td>
                             <td className="px-8 py-6">
                               <div className="flex items-center gap-3">
-                                <div className={cn("w-3 h-3 rounded-full", preset?.color.split(" ")[0])} />
+                                <div className={cn("w-3 h-3 rounded-full", preset?.color?.split(" ")[0])} />
                                 <span className="font-bold text-gray-600">{preset?.name}</span>
                               </div>
                             </td>
@@ -529,7 +529,7 @@ function CalendarApp() {
                   {presets.map(p => (
                     <button key={p.id} onClick={() => setFilterPresetId(p.id)} className={cn("w-full text-left px-3 py-2 rounded-xl text-sm font-bold flex items-center justify-between", filterPresetId === p.id ? "bg-blue-50 text-blue-600" : "hover:bg-gray-50")}>
                       <div className="flex items-center gap-2">
-                        <div className={cn("w-2 h-2 rounded-full", p.color.split(" ")[0])} />
+                        <div className={cn("w-2 h-2 rounded-full", p.color?.split(" ")[0])} />
                         {p.name}
                       </div>
                       {filterPresetId === p.id && <CheckSquare className="h-4 w-4" />}
