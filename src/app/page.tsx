@@ -575,7 +575,7 @@ function CalendarApp() {
                             </div>
                             <button
                               onClick={(e) => { e.stopPropagation(); deleteEntry(entry.id, e as any); }}
-                              className="text-white/40 hover:text-white/100 lg:opacity-0 lg:group-hover/entry:opacity-100 transition-opacity flex-shrink-0 p-[2px]"
+                              className="text-white/40 hover:text-white/100 hidden md:block lg:opacity-0 lg:group-hover/entry:opacity-100 transition-opacity flex-shrink-0 p-[2px]"
                             >
                               <Trash2 className="h-2.5 w-2.5" />
                             </button>
