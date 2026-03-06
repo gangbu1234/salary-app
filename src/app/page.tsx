@@ -188,6 +188,8 @@ function CalendarApp() {
   // Dialog states
   const [isAddEntryOpen, setIsAddEntryOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isDayPopupOpen, setIsDayPopupOpen] = useState(false);
+  const [selectedDayPopup, setSelectedDayPopup] = useState<Date | null>(null);
 
   // Form states
   const [formDate, setFormDate] = useState<Date>(new Date());
@@ -525,8 +527,13 @@ function CalendarApp() {
                       isSameDay(day, new Date()) && "bg-blue-50/20"
                     )}
                     onClick={() => {
-                      setCurrentDate(day);
-                      setViewMode("day");
+                      if (window.innerWidth < 768) {
+                        setSelectedDayPopup(day);
+                        setIsDayPopupOpen(true);
+                      } else {
+                        setCurrentDate(day);
+                        setViewMode("day");
+                      }
                     }}
                   >
                     <div className="flex items-center justify-between px-2 pt-1 font-sans">
@@ -560,7 +567,7 @@ function CalendarApp() {
                             )}
                           >
                             <div className="flex items-center gap-1 overflow-hidden">
-                              <span className="opacity-80 flex-shrink-0 tracking-tighter font-medium">{entry.startTime}</span>
+                              <span className="opacity-80 flex-shrink-0 tracking-tighter font-medium hidden md:inline">{entry.startTime}</span>
                               <span className="truncate">
                                 {entry.workplace || preset?.workplace ? `${entry.workplace || preset?.workplace} @ ` : ""}
                                 {preset?.name}
@@ -1099,6 +1106,82 @@ function CalendarApp() {
         *::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
         *::-webkit-scrollbar-track { background: transparent; }
       `}</style>
+
+      {/* --- Mobile Day Popup --- */}
+      <Dialog open={isDayPopupOpen} onOpenChange={setIsDayPopupOpen}>
+        <DialogContent className="max-w-[90%] w-[360px] max-h-[85vh] overflow-y-auto rounded-3xl p-6 bg-white border-0 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black text-gray-800">
+              {selectedDayPopup && format(selectedDayPopup, "yyyy年M月d日 (E)", { locale: ja })}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-4 space-y-3">
+            {selectedDayPopup && getDailyEntries(selectedDayPopup).length === 0 ? (
+              <p className="text-gray-400 font-bold text-center py-4">記録がありません</p>
+            ) : (
+              selectedDayPopup && getDailyEntries(selectedDayPopup).map(entry => {
+                const preset = presets.find(p => p.id === entry.presetId);
+                const minutes = calculateDuration(entry.startTime, entry.endTime);
+                return (
+                  <div
+                    key={entry.id}
+                    className="p-4 rounded-2xl bg-gray-50 flex items-center gap-4 cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => {
+                      setIsDayPopupOpen(false);
+                      setFormDate(selectedDayPopup);
+                      setCurrentDate(selectedDayPopup);
+                      setIsAddEntryOpen(true);
+                    }}
+                  >
+                    <div className={cn("w-2 h-10 rounded-full flex-shrink-0", preset?.color?.split(" ")[0])} />
+                    <div className="flex-1 overflow-hidden">
+                      <p className="font-black text-gray-800 text-sm tracking-tighter">{entry.startTime} - {entry.endTime}</p>
+                      <p className="text-[10px] font-bold text-gray-400 truncate mt-0.5">
+                        {entry.workplace || preset?.workplace ? `${entry.workplace || preset?.workplace} @ ` : ""}
+                        {preset?.name}
+                      </p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="font-bold text-blue-600 text-sm">¥{(Math.round((minutes / 60) * (preset?.rate || 0)) + entry.commuting).toLocaleString()}</p>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+
+            <div className="pt-4 space-y-2 border-t border-gray-50">
+              <Button
+                className="w-full h-12 rounded-xl bg-gray-900 text-white font-bold inline-flex items-center justify-center p-0"
+                onClick={() => {
+                  if (selectedDayPopup) {
+                    setFormDate(selectedDayPopup);
+                    setCurrentDate(selectedDayPopup);
+                    setIsDayPopupOpen(false);
+                    // Slight delay to allow popup to close before opening the form
+                    setTimeout(() => setIsAddEntryOpen(true), 150);
+                  }
+                }}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                新しい記録を追加
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full h-12 rounded-xl font-bold bg-white text-gray-600 border-gray-200"
+                onClick={() => {
+                  if (selectedDayPopup) {
+                    setCurrentDate(selectedDayPopup);
+                    setViewMode("day");
+                    setIsDayPopupOpen(false);
+                  }
+                }}
+              >
+                一日の詳細を確認
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
