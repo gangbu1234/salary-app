@@ -11,10 +11,10 @@ export async function GET() {
         const sql = neon(dbUrl);
 
         // テーブルが存在しない場合は作成
-        await sql('CREATE TABLE IF NOT EXISTS app_state (id VARCHAR PRIMARY KEY, data JSONB)');
+        await sql`CREATE TABLE IF NOT EXISTS app_state (id VARCHAR PRIMARY KEY, data JSONB)`;
 
         // データ取得
-        const result = await sql("SELECT data FROM app_state WHERE id = 'cal-data'");
+        const result = await sql`SELECT data FROM app_state WHERE id = 'cal-data'`;
 
         if (result.length > 0) {
             return NextResponse.json({ data: result[0].data || {} });
@@ -37,12 +37,11 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
 
         // テーブルが存在しない場合は作成
-        await sql('CREATE TABLE IF NOT EXISTS app_state (id VARCHAR PRIMARY KEY, data JSONB)');
+        await sql`CREATE TABLE IF NOT EXISTS app_state (id VARCHAR PRIMARY KEY, data JSONB)`;
 
+        const jsonBody = JSON.stringify(body);
         // UPSERT (INSERT or UPDATE)
-        await sql('INSERT INTO app_state (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data',
-            ['cal-data', JSON.stringify(body)]
-        );
+        await sql`INSERT INTO app_state (id, data) VALUES ('cal-data', ${jsonBody}::jsonb) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data`;
 
         return NextResponse.json({ success: true });
     } catch (error) {
