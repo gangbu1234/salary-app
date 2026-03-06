@@ -275,19 +275,86 @@ function CalendarApp() {
   };
 
   // --- Logic ---
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSynced, setLastSynced] = useState<Date | null>(null);
+
+  const loadData = async () => {
+    setIsSyncing(true);
+    try {
+      // First try local storage for immediate render
+      const saved = localStorage.getItem("cal-entries");
+      const savedPresets = localStorage.getItem("cal-presets");
+      const savedCommPresets = localStorage.getItem("cal-comm-presets");
+
+      let hasLocalData = false;
+      if (saved) { setEntries(JSON.parse(saved)); hasLocalData = true; }
+      if (savedPresets) setPresets(JSON.parse(savedPresets));
+      if (savedCommPresets) setCommPresets(JSON.parse(savedCommPresets));
+
+      // Then fetch from server
+      const res = await fetch('/api/data');
+      if (res.ok) {
+        const { data } = await res.json();
+        if (data && data.entries) {
+          setEntries(data.entries);
+          if (data.presets) setPresets(data.presets);
+          if (data.commPresets) setCommPresets(data.commPresets);
+          setLastSynced(new Date());
+
+          // Update local storage with fresh server data
+          localStorage.setItem("cal-entries", JSON.stringify(data.entries));
+          localStorage.setItem("cal-presets", JSON.stringify(data.presets || []));
+          localStorage.setItem("cal-comm-presets", JSON.stringify(data.commPresets || []));
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load data:", error);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const saveData = async (currentEntries: any, currentPresets: any, currentCommPresets: any) => {
+    setIsSyncing(true);
+    try {
+      const dataToSave = {
+        entries: currentEntries,
+        presets: currentPresets,
+        commPresets: currentCommPresets,
+        updatedAt: new Date().toISOString()
+      };
+
+      await fetch('/api/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dataToSave)
+      });
+      setLastSynced(new Date());
+    } catch (error) {
+      console.error("Failed to save data:", error);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   useEffect(() => {
-    const saved = localStorage.getItem("cal-entries");
-    const savedPresets = localStorage.getItem("cal-presets");
-    const savedCommPresets = localStorage.getItem("cal-comm-presets");
-    if (saved) setEntries(JSON.parse(saved));
-    if (savedPresets) setPresets(JSON.parse(savedPresets));
-    if (savedCommPresets) setCommPresets(JSON.parse(savedCommPresets));
+    loadData();
   }, []);
 
   useEffect(() => {
+    // Skip initial empty render save
+    if (entries.length === 0 && presets.length === 3) return;
+
     localStorage.setItem("cal-entries", JSON.stringify(entries));
     localStorage.setItem("cal-presets", JSON.stringify(presets));
     localStorage.setItem("cal-comm-presets", JSON.stringify(commPresets));
+
+    // Debounce server save to avoid too many requests
+    const timeoutId = setTimeout(() => {
+      saveData(entries, presets, commPresets);
+    }, 2000);
+
+    return () => clearTimeout(timeoutId);
   }, [entries, presets, commPresets]);
 
   const monthStart = startOfMonth(currentDate);
@@ -624,6 +691,10 @@ function CalendarApp() {
             </Button>
 
             {/* Filter Toggle */}
+            <Button variant="ghost" size="icon" className="h-10 w-12 rounded-md" onClick={loadData} disabled={isSyncing}>
+              <RefreshCw className={cn("h-5 w-5 text-gray-400", isSyncing && "animate-spin text-blue-500")} />
+            </Button>
+
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant={filterPresetId !== "all" ? "default" : "secondary"} size="icon" className={cn("h-10 w-12 rounded-md", filterPresetId !== "all" ? "bg-blue-600 text-white" : "bg-gray-100/50")}>
