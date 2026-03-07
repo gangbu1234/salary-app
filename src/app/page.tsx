@@ -206,26 +206,28 @@ function CalendarApp() {
       let payName = "未設定";
       let payDateObj = new Date("2099-12-31");
 
-      if (preset.closingDay && preset.paymentDay && preset.paymentMonthOffset !== undefined) {
-        const eDate = new Date(entry.date);
-        let closingMonth = eDate.getMonth();
-        let closingYear = eDate.getFullYear();
+      const cDaySetting = preset.closingDay ?? 31;
+      const pOffsetSetting = preset.paymentMonthOffset ?? 1;
+      const pDaySetting = preset.paymentDay ?? 31;
 
-        const lastDayOfE = endOfMonth(eDate).getDate();
-        const cDay = preset.closingDay === 31 ? lastDayOfE : Math.min(preset.closingDay, lastDayOfE);
+      const eDate = new Date(entry.date);
+      let closingMonth = eDate.getMonth();
+      let closingYear = eDate.getFullYear();
 
-        if (eDate.getDate() > cDay) {
-          closingMonth += 1;
-        }
+      const lastDayOfE = endOfMonth(eDate).getDate();
+      const cDay = cDaySetting === 31 ? lastDayOfE : Math.min(cDaySetting, lastDayOfE);
 
-        const payMonth = closingMonth + preset.paymentMonthOffset;
-        const tempPay = new Date(closingYear, payMonth, 1);
-        const lastDayOfP = endOfMonth(tempPay).getDate();
-        const pDay = preset.paymentDay === 31 ? lastDayOfP : Math.min(preset.paymentDay, lastDayOfP);
-
-        payDateObj = new Date(tempPay.getFullYear(), tempPay.getMonth(), pDay);
-        payName = format(payDateObj, "yyyy年M月d日");
+      if (eDate.getDate() > cDay) {
+        closingMonth += 1;
       }
+
+      const payMonth = closingMonth + pOffsetSetting;
+      const tempPay = new Date(closingYear, payMonth, 1);
+      const lastDayOfP = endOfMonth(tempPay).getDate();
+      const pDay = pDaySetting === 31 ? lastDayOfP : Math.min(pDaySetting, lastDayOfP);
+
+      payDateObj = new Date(tempPay.getFullYear(), tempPay.getMonth(), pDay);
+      payName = format(payDateObj, "yyyy年M月d日");
 
       if (!agg[payName]) {
         agg[payName] = { total: 0, salary: 0, commuting: 0, dateObj: payDateObj };
@@ -648,6 +650,31 @@ function CalendarApp() {
               </div>
             </div>
 
+            {filterPresetIds.length > 1 && (
+              <div className="flex flex-wrap gap-4 pb-4">
+                {filterPresetIds.map(id => {
+                  const p = presets.find(x => x.id === id);
+                  if (!p) return null;
+                  const pEntries = filteredEntries.filter(e => e.presetId === id);
+                  const pSalary = pEntries.reduce((acc, curr) => acc + Math.round((calculateDuration(curr.startTime, curr.endTime) / 60) * p.rate), 0);
+                  const pComm = pEntries.reduce((acc, curr) => acc + curr.commuting, 0);
+                  const pTtl = pSalary + pComm;
+                  return (
+                    <div key={id} className="min-w-[160px] p-5 bg-gray-50 rounded-[2rem] border border-gray-100 flex-shrink-0 flex items-center justify-between gap-6 shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <div className={cn("w-3 h-10 rounded-full", p.color.split(" ")[0])} />
+                        <div>
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">小計</p>
+                          <p className="text-[13px] font-bold text-gray-600 leading-none">{p.name}</p>
+                        </div>
+                      </div>
+                      <p className="text-3xl font-black text-gray-900 tracking-tighter">¥{pTtl.toLocaleString()}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             <div className="space-y-4">
               {filteredEntries.length === 0 ? (
                 <div className="py-20 text-center border-4 border-dashed border-gray-100 rounded-[3rem]">
@@ -892,6 +919,8 @@ function CalendarApp() {
                   </button>
                   {presets.map(p => {
                     const isActive = filterPresetIds.includes(p.id);
+                    const pEntries = entries.filter(e => isSameMonth(new Date(e.date), currentDate) && e.presetId === p.id);
+                    const pTotal = pEntries.reduce((acc, curr) => acc + curr.commuting + Math.round((calculateDuration(curr.startTime, curr.endTime) / 60) * p.rate), 0);
                     return (
                       <button
                         key={p.id}
@@ -900,13 +929,16 @@ function CalendarApp() {
                             prev.includes(p.id) ? prev.filter(id => id !== p.id) : [...prev, p.id]
                           );
                         }}
-                        className={cn("w-full text-left px-3 py-2 rounded-xl text-sm font-bold flex items-center justify-between", isActive ? "bg-blue-50 text-blue-600" : "hover:bg-gray-50")}
+                        className={cn("w-full text-left px-3 py-2 rounded-xl flex items-center justify-between transition-colors", isActive ? "bg-blue-50/80" : "hover:bg-gray-50")}
                       >
                         <div className="flex items-center gap-2">
                           <div className={cn("w-2 h-2 rounded-full", p.color?.split(" ")[0])} />
-                          {p.name}
+                          <div>
+                            <p className={cn("text-xs font-bold", isActive ? "text-blue-700" : "text-gray-700")}>{p.name}</p>
+                            <p className={cn("text-[10px] font-black tracking-tighter", isActive ? "text-blue-500" : "text-gray-400")}>¥{pTotal.toLocaleString()}</p>
+                          </div>
                         </div>
-                        {isActive && <CheckSquare className="h-4 w-4" />}
+                        {isActive && <CheckSquare className="h-4 w-4 text-blue-600" />}
                       </button>
                     );
                   })}
