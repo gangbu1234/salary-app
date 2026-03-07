@@ -57,6 +57,7 @@ interface HourlyRatePreset {
   rate: number;
   color: string;
   workplace?: string;
+  linkedCommutingPresetId?: string;
 }
 
 interface CommutingPreset {
@@ -1130,7 +1131,14 @@ function CalendarApp() {
                 <Select value={formPresetId} onValueChange={(val) => {
                   setFormPresetId(val);
                   const p = presets.find(x => x.id === val);
-                  if (p && !formWorkplace) setFormWorkplace(p.workplace || "");
+                  if (p) {
+                    if (!formWorkplace) setFormWorkplace(p.workplace || "");
+                    if (p.linkedCommutingPresetId) {
+                      setFormCommPresetId(p.linkedCommutingPresetId);
+                      const cp = commPresets.find(c => c.id === p.linkedCommutingPresetId);
+                      if (cp) setFormCommuting(cp.amount);
+                    }
+                  }
                 }}>
                   <SelectTrigger className="h-14 rounded-2xl text-lg font-bold bg-gray-50 border-none shadow-inner px-5">
                     <SelectValue />
@@ -1294,7 +1302,14 @@ function CalendarApp() {
               <Select value={editFormPresetId} onValueChange={(val) => {
                 setEditFormPresetId(val);
                 const p = presets.find(x => x.id === val);
-                if (p && !editFormWorkplace) setEditFormWorkplace(p.workplace || "");
+                if (p) {
+                  if (!editFormWorkplace) setEditFormWorkplace(p.workplace || "");
+                  if (p.linkedCommutingPresetId) {
+                    setEditFormCommPresetId(p.linkedCommutingPresetId);
+                    const cp = commPresets.find(c => c.id === p.linkedCommutingPresetId);
+                    if (cp) setEditFormCommuting(cp.amount);
+                  }
+                }
               }}>
                 <SelectTrigger className="h-14 rounded-2xl text-lg font-bold bg-gray-50 border-none shadow-inner px-5">
                   <SelectValue />
@@ -1407,6 +1422,38 @@ function CalendarApp() {
                         value={p.rate}
                         onChange={(e) => setPresets(presets.map(x => x.id === p.id ? { ...x, rate: Number(e.target.value) } : x))}
                       />
+                    </div>
+                    <div className="px-2 pt-3 pb-1 border-t border-gray-50 mt-2 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-[10px] font-bold text-gray-400">表示カラー</Label>
+                        <div className="flex gap-1.5 flex-wrap justify-end max-w-[170px]">
+                          {PRESET_COLORS.map(color => (
+                            <button
+                              key={color}
+                              onClick={() => setPresets(presets.map(x => x.id === p.id ? { ...x, color } : x))}
+                              className={cn("w-5 h-5 rounded-full border-2 transition-all", color.split(" ")[0], p.color === color ? "border-black scale-110 shadow-sm" : "border-transparent opacity-30 hover:opacity-100")}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold text-gray-400">連動する交通費 (自動入力)</Label>
+                        <Select value={p.linkedCommutingPresetId || "none"} onValueChange={(val) => {
+                          setPresets(presets.map(x => x.id === p.id ? { ...x, linkedCommutingPresetId: val === "none" ? undefined : val } : x));
+                        }}>
+                          <SelectTrigger className="h-9 rounded-xl text-xs font-bold bg-gray-50 border-none px-3">
+                            <SelectValue placeholder="連動なし" />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl border-none shadow-xl">
+                            <SelectItem value="none" className="text-xs text-gray-400">連動なし</SelectItem>
+                            {commPresets.map(cp => (
+                              <SelectItem key={cp.id} value={cp.id} className="text-xs">
+                                {cp.name} (¥{cp.amount})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </div>
                 ))}
