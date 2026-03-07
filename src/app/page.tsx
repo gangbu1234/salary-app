@@ -24,7 +24,8 @@ import {
   Plus, Search, Calendar as CalendarIcon, Grid, List,
   Users, Printer, RefreshCw, Settings, Menu, Filter,
   CheckSquare, ChevronLeft, ChevronRight, Calculator,
-  ColumnsIcon, CalendarDays, Sun, MapPin, Copy
+  ColumnsIcon, CalendarDays, Sun, MapPin, Copy,
+  Banknote, Wallet, Coins, CircleDollarSign
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -451,7 +452,7 @@ function CalendarApp() {
                   </div>
                 );
               })}
-              <Button variant="outline" className="w-full h-24 rounded-[2.5rem] border-dashed border-2 text-gray-400 text-xl font-bold" onClick={() => { setIsCopying(false); setIsAddEntryOpen(true); }}>
+              <Button variant="outline" className="w-full h-24 rounded-[2.5rem] border-dashed border-2 text-gray-400 text-xl font-bold" onClick={() => { setFormDate(currentDate); setIsCopying(false); setIsAddEntryOpen(true); }}>
                 <Plus className="mr-2" /> 新しい勤務を追加
               </Button>
             </div>
@@ -815,7 +816,7 @@ function CalendarApp() {
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <Button variant="secondary" size="icon" className="h-10 w-12 bg-gray-100/50 rounded-md" onClick={() => { setFormDate(new Date()); setIsCopying(false); setIsAddEntryOpen(true); }}>
+            <Button variant="secondary" size="icon" className="h-10 w-12 bg-gray-100/50 rounded-md" onClick={() => { setFormDate(currentDate); setIsCopying(false); setIsAddEntryOpen(true); }}>
               <Plus className="h-6 w-6 text-gray-600" />
             </Button>
             <Button variant="secondary" size="icon" className="h-10 w-12 bg-gray-100/50 rounded-md">
@@ -968,8 +969,8 @@ function CalendarApp() {
           <span className="text-[11px] font-medium tracking-tighter">本日</span>
         </button>
         <button className="flex flex-col items-center gap-1 opacity-80 hover:opacity-100 transition-opacity">
-          <Users className="h-7 w-7" />
-          <span className="text-[11px] font-medium tracking-tighter">招待</span>
+          <Banknote className="h-7 w-7" />
+          <span className="text-[11px] font-medium tracking-tighter">支払集計</span>
         </button>
         <button className="flex flex-col items-center gap-1 opacity-80 hover:opacity-100 transition-opacity">
           <Printer className="h-7 w-7" />
