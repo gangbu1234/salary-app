@@ -262,6 +262,7 @@ function CalendarApp() {
   const [isCopying, setIsCopying] = useState(false);
   const [editingEntry, setEditingEntry] = useState<WorkEntry | null>(null);
   const [isEditEntryOpen, setIsEditEntryOpen] = useState(false);
+  const [workplaceHistory, setWorkplaceHistory] = useState<string[]>([]);
 
   // 編集用フォーム（編集ダイアログ専用）
   const [editFormDate, setEditFormDate] = useState<Date>(new Date());
@@ -390,11 +391,13 @@ function CalendarApp() {
       const saved = localStorage.getItem("cal-entries");
       const savedPresets = localStorage.getItem("cal-presets");
       const savedCommPresets = localStorage.getItem("cal-comm-presets");
+      const savedHistory = localStorage.getItem("cal-workplace-history");
 
       let hasLocalData = false;
       if (saved) { setEntries(JSON.parse(saved)); hasLocalData = true; }
       if (savedPresets) setPresets(JSON.parse(savedPresets));
       if (savedCommPresets) setCommPresets(JSON.parse(savedCommPresets));
+      if (savedHistory) setWorkplaceHistory(JSON.parse(savedHistory));
 
       // Then fetch from server
       const res = await fetch('/api/data');
@@ -440,6 +443,15 @@ function CalendarApp() {
     } finally {
       setIsSyncing(false);
     }
+  };
+
+  const updateWorkplaceHistory = (wp: string) => {
+    if (!wp || !wp.trim()) return;
+    setWorkplaceHistory(prev => {
+      const newHistory = [wp.trim(), ...prev.filter(item => item !== wp.trim())].slice(0, 20);
+      localStorage.setItem("cal-workplace-history", JSON.stringify(newHistory));
+      return newHistory;
+    });
   };
 
   useEffect(() => {
@@ -1219,6 +1231,7 @@ function CalendarApp() {
                     onChange={(e) => setFormWorkplace(e.target.value)}
                     placeholder="例: 文京区, 本社など"
                     className="pl-12 h-14 rounded-2xl text-xl font-black bg-gray-50 border-none shadow-inner"
+                    list="workplace-history"
                   />
                 </div>
               </div>
@@ -1289,6 +1302,7 @@ function CalendarApp() {
                   workplace: formWorkplace
                 };
                 setEntries(prev => [...prev, newEntry]);
+                updateWorkplaceHistory(formWorkplace);
                 setIsAddEntryOpen(false);
                 setIsCopying(false);
               }} className="w-full h-16 bg-zinc-900 hover:bg-black text-white rounded-[1.25rem] font-black text-xl shadow-xl transition-all active:scale-95">
@@ -1390,6 +1404,7 @@ function CalendarApp() {
                   onChange={(e) => setEditFormWorkplace(e.target.value)}
                   placeholder="例: 文京区, 本社など"
                   className="pl-12 h-14 rounded-2xl text-xl font-black bg-gray-50 border-none shadow-inner"
+                  list="workplace-history"
                 />
               </div>
             </div>
@@ -1475,6 +1490,7 @@ function CalendarApp() {
                     commutingPresetId: editFormCommPresetId,
                     workplace: editFormWorkplace
                   } : ent));
+                  updateWorkplaceHistory(editFormWorkplace);
                   setIsEditEntryOpen(false);
                   setEditingEntry(null);
                 }}
@@ -1716,6 +1732,12 @@ function CalendarApp() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <datalist id="workplace-history">
+        {workplaceHistory.map((item, index) => (
+          <option key={index} value={item} />
+        ))}
+      </datalist>
 
       <style jsx global>{`
         body {
