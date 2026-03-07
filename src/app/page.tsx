@@ -489,17 +489,15 @@ function CalendarApp() {
                   const label = (entry.workplace || preset?.workplace)
                     ? `${entry.workplace || preset?.workplace} @ ${preset?.name ?? ""}`
                     : (preset?.name ?? "");
+                  const textColorClass = preset?.color ? preset.color.split(" ")[0].replace("bg-", "text-") : "text-gray-600";
                   return (
                     <div
                       key={entry.id}
                       onClick={() => openEditModal(entry)}
-                      className={cn(
-                        "flex items-center gap-1.5 px-2 py-[3px] rounded-md cursor-pointer active:opacity-70",
-                        preset?.color || "bg-gray-200"
-                      )}
+                      className="flex items-start gap-1.5 px-2 py-[2px] rounded-md cursor-pointer active:opacity-70 group relative"
                     >
-                      <span className="text-[10px] font-bold opacity-80 flex-shrink-0 tabular-nums">{entry.startTime}</span>
-                      <span className="text-[11px] font-bold truncate leading-tight">{label}</span>
+                      <span className={cn("text-[11px] font-black flex-shrink-0 tabular-nums pt-[1px]", textColorClass)}>{entry.startTime}</span>
+                      <span className={cn("text-[11px] font-bold leading-snug break-words", textColorClass)}>{label}</span>
                     </div>
                   );
                 })}
@@ -550,10 +548,13 @@ function CalendarApp() {
                             <div
                               key={entry.id}
                               onClick={() => openEditModal(entry)}
-                              className={cn("p-3 rounded-xl border-l-[4px] shadow-sm bg-white border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors group relative", preset?.color?.replace("bg-", "border-"))}
+                              className={cn(
+                                "p-3 rounded-xl border-l-[4px] shadow-sm bg-white cursor-pointer hover:bg-gray-50 transition-colors group relative",
+                                preset?.color ? preset.color.split(" ")[0].replace("bg-", "border-") : "border-gray-200"
+                              )}
                             >
                               <p className="text-[10px] font-black text-gray-400">{entry.startTime} - {entry.endTime}</p>
-                              <p className="text-xs font-bold truncate pr-4">
+                              <p className="text-xs font-bold truncate pr-4 text-gray-700">
                                 {(entry.workplace || preset?.workplace) ? `${entry.workplace || preset?.workplace} @ ` : ""}
                                 {preset?.name}
                               </p>
