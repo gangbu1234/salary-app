@@ -712,10 +712,28 @@ function CalendarApp() {
         <header className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div className="flex items-baseline gap-4">
             <h1 className="text-3xl md:text-5xl font-light text-gray-700 leading-none flex items-baseline">
-              <span className="truncate max-w-[120px] md:max-w-none">
-                {viewMode === "year" ? format(currentDate, "yyyy年") : format(currentDate, "M月", { locale: ja })}
-              </span>
-              {viewMode !== "year" && <span className="text-xl md:text-4xl text-gray-400 ml-2">{format(currentDate, "yyyy")}</span>}
+              {viewMode === "year" ? (
+                <span className="truncate max-w-[120px] md:max-w-none cursor-pointer hover:text-gray-900 transition-colors" onClick={() => setViewMode("year")}>
+                  {format(currentDate, "yyyy年")}
+                </span>
+              ) : (
+                <>
+                  <span
+                    className="truncate max-w-[120px] md:max-w-none cursor-pointer hover:text-gray-900 transition-colors"
+                    onClick={() => setViewMode("month")}
+                    title="月表示に切り替え"
+                  >
+                    {format(currentDate, "M月", { locale: ja })}
+                  </span>
+                  <span
+                    className="text-xl md:text-4xl text-gray-400 ml-2 cursor-pointer hover:text-gray-600 transition-colors"
+                    onClick={() => setViewMode("year")}
+                    title="年表示に切り替え"
+                  >
+                    {format(currentDate, "yyyy")}
+                  </span>
+                </>
+              )}
             </h1>
             <div className="flex items-center gap-1 ml-4 scale-75 md:scale-100 origin-left">
               <Button variant="ghost" size="icon" onClick={() => setCurrentDate(viewMode === "year" ? subYears(currentDate, 1) : subMonths(currentDate, 1))}>
