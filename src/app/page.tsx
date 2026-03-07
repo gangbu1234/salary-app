@@ -457,60 +457,128 @@ function CalendarApp() {
           </div>
         );
 
-      case "week":
+      case "week": {
         const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
         const weekDays = eachDayOfInterval({ start: weekStart, end: addDays(weekStart, 6) });
-        return (
-          <div className="flex-1 overflow-y-auto p-8 bg-gray-50/20 space-y-6">
-            <div className="grid grid-cols-7 gap-4 h-full">
-              {weekDays.map((day, i) => {
-                const dailyEntries = getDailyEntries(day);
-                return (
-                  <div key={i} className="flex flex-col gap-4">
+        const DAY_LABELS = ["月", "火", "水", "木", "金", "土", "日"];
+
+        const renderMobileDayCard = (day: Date, i: number) => {
+          const dailyEntries = getDailyEntries(day);
+          const isToday = isSameDay(day, new Date());
+          const isSat = i === 5;
+          const isSun = i === 6;
+          return (
+            <div key={i} className={cn("border-b border-gray-100 last:border-b-0", isToday && "bg-purple-50/40")}>
+              <div
+                className="flex items-baseline gap-2 px-3 pt-2 pb-1 cursor-pointer active:opacity-70"
+                onClick={() => { setCurrentDate(day); setViewMode("day"); }}
+              >
+                <span className={cn(
+                  "text-2xl font-black leading-none",
+                  isToday ? "bg-purple-600 text-white rounded-full w-9 h-9 flex items-center justify-center text-lg" :
+                    isSat ? "text-blue-600" : isSun ? "text-rose-600" : "text-gray-800"
+                )}>{format(day, "d")}</span>
+                <span className={cn(
+                  "text-sm font-bold",
+                  isToday ? "text-purple-600" : isSat ? "text-blue-400" : isSun ? "text-rose-400" : "text-gray-400"
+                )}>{DAY_LABELS[i]}</span>
+              </div>
+              <div className="px-2 pb-3 space-y-1 min-h-[28px]">
+                {dailyEntries.map(entry => {
+                  const preset = presets.find(p => p.id === entry.presetId);
+                  const label = (entry.workplace || preset?.workplace)
+                    ? `${entry.workplace || preset?.workplace} @ ${preset?.name ?? ""}`
+                    : (preset?.name ?? "");
+                  return (
                     <div
-                      onClick={() => { setCurrentDate(day); setViewMode("day"); }}
+                      key={entry.id}
+                      onClick={() => openEditModal(entry)}
                       className={cn(
-                        "p-4 rounded-2xl text-center shadow-sm border cursor-pointer hover:opacity-80 transition-opacity",
-                        isSameDay(day, new Date()) ? "bg-purple-600 text-white border-purple-400" : "bg-white text-gray-800 border-gray-100"
+                        "flex items-center gap-1.5 px-2 py-[3px] rounded-md cursor-pointer active:opacity-70",
+                        preset?.color || "bg-gray-200"
                       )}
                     >
-                      <p className="text-xs font-bold uppercase opacity-70">{["月", "火", "水", "木", "金", "土", "日"][i] || format(day, "eee", { locale: ja })}</p>
-                      <p className="text-2xl font-black">{format(day, "d")}</p>
+                      <span className="text-[10px] font-bold opacity-80 flex-shrink-0 tabular-nums">{entry.startTime}</span>
+                      <span className="text-[11px] font-bold truncate leading-tight">{label}</span>
                     </div>
-                    <div className="flex-1 space-y-3">
-                      {dailyEntries.map(entry => {
-                        const preset = presets.find(p => p.id === entry.presetId);
-                        return (
-                          <div
-                            key={entry.id}
-                            onClick={() => openEditModal(entry)}
-                            className={cn("p-3 rounded-xl border-l-[4px] shadow-sm bg-white border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors group relative", preset?.color?.replace("bg-", "border-"))}
-                          >
-                            <p className="text-[10px] font-black text-gray-400">{entry.startTime} - {entry.endTime}</p>
-                            <p className="text-xs font-bold truncate pr-4">
-                              {entry.workplace || preset?.workplace ? `${entry.workplace || preset?.workplace} @ ` : ""}
-                              {preset?.name}
-                            </p>
-                            <p className="text-[10px] font-black text-blue-600">¥{(Math.round((calculateDuration(entry.startTime, entry.endTime) / 60) * (preset?.rate || 0)) + entry.commuting).toLocaleString()}</p>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); deleteEntry(entry.id, e as any); }}
-                              className="absolute top-1 right-1 text-gray-300 hover:text-red-500 md:opacity-0 group-hover:opacity-100 transition-opacity p-1"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        );
-                      })}
-                      <Button variant="ghost" className="w-full h-12 border-2 border-dashed border-gray-200 rounded-xl text-gray-300" onClick={() => { setFormDate(day); setIsCopying(false); setIsAddEntryOpen(true); }}>
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+                <button
+                  onClick={() => { setFormDate(day); setIsCopying(false); setIsAddEntryOpen(true); }}
+                  className="w-full flex justify-center text-gray-200 hover:text-gray-400 transition-colors pt-0.5"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
-          </div>
+          );
+        };
+
+        return (
+          <>
+            {/* === スマホ: 左(月〜木) / 右(金〜日) 縦積み2カラム === */}
+            <div className="md:hidden flex-1 overflow-y-auto flex bg-white">
+              <div className="flex-1 border-r border-gray-200 flex flex-col">
+                {weekDays.slice(0, 4).map((day, i) => renderMobileDayCard(day, i))}
+              </div>
+              <div className="flex-1 flex flex-col">
+                {weekDays.slice(4, 7).map((day, i) => renderMobileDayCard(day, i + 4))}
+              </div>
+            </div>
+
+            {/* === PC: 7カラムグリッド === */}
+            <div className="hidden md:block flex-1 overflow-y-auto p-8 bg-gray-50/20">
+              <div className="grid grid-cols-7 gap-4">
+                {weekDays.map((day, i) => {
+                  const dailyEntries = getDailyEntries(day);
+                  return (
+                    <div key={i} className="flex flex-col gap-4">
+                      <div
+                        onClick={() => { setCurrentDate(day); setViewMode("day"); }}
+                        className={cn(
+                          "p-4 rounded-2xl text-center shadow-sm border cursor-pointer hover:opacity-80 transition-opacity",
+                          isSameDay(day, new Date()) ? "bg-purple-600 text-white border-purple-400" : "bg-white text-gray-800 border-gray-100"
+                        )}
+                      >
+                        <p className="text-xs font-bold uppercase opacity-70">{DAY_LABELS[i]}</p>
+                        <p className="text-2xl font-black">{format(day, "d")}</p>
+                      </div>
+                      <div className="flex-1 space-y-3">
+                        {dailyEntries.map(entry => {
+                          const preset = presets.find(p => p.id === entry.presetId);
+                          return (
+                            <div
+                              key={entry.id}
+                              onClick={() => openEditModal(entry)}
+                              className={cn("p-3 rounded-xl border-l-[4px] shadow-sm bg-white border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors group relative", preset?.color?.replace("bg-", "border-"))}
+                            >
+                              <p className="text-[10px] font-black text-gray-400">{entry.startTime} - {entry.endTime}</p>
+                              <p className="text-xs font-bold truncate pr-4">
+                                {(entry.workplace || preset?.workplace) ? `${entry.workplace || preset?.workplace} @ ` : ""}
+                                {preset?.name}
+                              </p>
+                              <p className="text-[10px] font-black text-blue-600">¥{(Math.round((calculateDuration(entry.startTime, entry.endTime) / 60) * (preset?.rate || 0)) + entry.commuting).toLocaleString()}</p>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); deleteEntry(entry.id, e as any); }}
+                                className="absolute top-1 right-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                        <Button variant="ghost" className="w-full h-12 border-2 border-dashed border-gray-200 rounded-xl text-gray-300" onClick={() => { setFormDate(day); setIsCopying(false); setIsAddEntryOpen(true); }}>
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </>
         );
+      }
 
       case "list":
         return (
