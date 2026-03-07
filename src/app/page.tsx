@@ -59,6 +59,9 @@ interface HourlyRatePreset {
   color: string;
   workplace?: string;
   linkedCommutingPresetId?: string;
+  closingDay?: number;
+  paymentMonthOffset?: number;
+  paymentDay?: number;
 }
 
 interface CommutingPreset {
@@ -191,7 +194,54 @@ function CalendarApp() {
   const [isAddEntryOpen, setIsAddEntryOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDayPopupOpen, setIsDayPopupOpen] = useState(false);
+  const [isPaydayAggregationOpen, setIsPaydayAggregationOpen] = useState(false);
   const [selectedDayPopup, setSelectedDayPopup] = useState<Date | null>(null);
+
+  const paydayAggregations = useMemo(() => {
+    const agg: Record<string, { total: number, salary: number, commuting: number, dateObj: Date }> = {};
+    entries.forEach(entry => {
+      const preset = presets.find(p => p.id === entry.presetId);
+      if (!preset) return;
+
+      let payName = "未設定";
+      let payDateObj = new Date("2099-12-31");
+
+      if (preset.closingDay && preset.paymentDay && preset.paymentMonthOffset !== undefined) {
+        const eDate = new Date(entry.date);
+        let closingMonth = eDate.getMonth();
+        let closingYear = eDate.getFullYear();
+
+        const lastDayOfE = endOfMonth(eDate).getDate();
+        const cDay = preset.closingDay === 31 ? lastDayOfE : Math.min(preset.closingDay, lastDayOfE);
+
+        if (eDate.getDate() > cDay) {
+          closingMonth += 1;
+        }
+
+        const payMonth = closingMonth + preset.paymentMonthOffset;
+        const tempPay = new Date(closingYear, payMonth, 1);
+        const lastDayOfP = endOfMonth(tempPay).getDate();
+        const pDay = preset.paymentDay === 31 ? lastDayOfP : Math.min(preset.paymentDay, lastDayOfP);
+
+        payDateObj = new Date(tempPay.getFullYear(), tempPay.getMonth(), pDay);
+        payName = format(payDateObj, "yyyy年M月d日");
+      }
+
+      if (!agg[payName]) {
+        agg[payName] = { total: 0, salary: 0, commuting: 0, dateObj: payDateObj };
+      }
+
+      const minutes = calculateDuration(entry.startTime, entry.endTime);
+      const salary = Math.round((minutes / 60) * preset.rate);
+      agg[payName].salary += salary;
+      agg[payName].commuting += entry.commuting;
+      agg[payName].total += salary + entry.commuting;
+    });
+
+    return Object.entries(agg)
+      .map(([name, data]) => ({ name, ...data }))
+      .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
+  }, [entries, presets]);
 
   // Form states
   const [formDate, setFormDate] = useState<Date>(new Date());
@@ -968,8 +1018,11 @@ function CalendarApp() {
           <CalendarIcon className="h-7 w-7" />
           <span className="text-[11px] font-medium tracking-tighter">本日</span>
         </button>
-        <button className="flex flex-col items-center gap-1 opacity-80 hover:opacity-100 transition-opacity">
-          <Banknote className="h-7 w-7" />
+        <button
+          className="flex flex-col items-center gap-1 opacity-80 hover:opacity-100 transition-opacity"
+          onClick={() => { setIsPaydayAggregationOpen(true); setIsSidebarOpen(false); }}
+        >
+          <CircleDollarSign strokeWidth={1.5} className="h-7 w-7 text-gray-300" />
           <span className="text-[11px] font-medium tracking-tighter">支払集計</span>
         </button>
         <button className="flex flex-col items-center gap-1 opacity-80 hover:opacity-100 transition-opacity">
@@ -1455,6 +1508,41 @@ function CalendarApp() {
                           </SelectContent>
                         </Select>
                       </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold text-gray-400">締日・支払日</Label>
+                        <div className="flex gap-1 items-center">
+                          <Select value={p.closingDay?.toString() || "31"} onValueChange={(val) => setPresets(presets.map(x => x.id === p.id ? { ...x, closingDay: parseInt(val) } : x))}>
+                            <SelectTrigger className="h-9 rounded-xl text-[10px] font-bold bg-gray-50 border-none px-2 flex-1">
+                              <SelectValue placeholder="締日" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-none shadow-xl min-w-[80px]">
+                              {[5, 10, 15, 20, 25, 28, 31].map(d => (
+                                <SelectItem key={d} value={d.toString()} className="text-[10px]">{d === 31 ? "末日締め" : `${d}日締め`}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Select value={p.paymentMonthOffset?.toString() || "1"} onValueChange={(val) => setPresets(presets.map(x => x.id === p.id ? { ...x, paymentMonthOffset: parseInt(val) } : x))}>
+                            <SelectTrigger className="h-9 rounded-xl text-[10px] font-bold bg-gray-50 border-none px-2 w-[55px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-none shadow-xl min-w-[55px]">
+                              <SelectItem value="0" className="text-[10px]">当月</SelectItem>
+                              <SelectItem value="1" className="text-[10px]">翌月</SelectItem>
+                              <SelectItem value="2" className="text-[10px]">翌々月</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Select value={p.paymentDay?.toString() || "31"} onValueChange={(val) => setPresets(presets.map(x => x.id === p.id ? { ...x, paymentDay: parseInt(val) } : x))}>
+                            <SelectTrigger className="h-9 rounded-xl text-[10px] font-bold bg-gray-50 border-none px-2 flex-1">
+                              <SelectValue placeholder="支払日" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-none shadow-xl min-w-[80px]">
+                              {[5, 10, 15, 20, 25, 28, 31].map(d => (
+                                <SelectItem key={d} value={d.toString()} className="text-[10px]">{d === 31 ? "末日払い" : `${d}払い`}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1525,6 +1613,63 @@ function CalendarApp() {
           </div>
           <div className="p-8 bg-gray-50 border-t border-gray-100 text-center">
             <p className="text-xs text-gray-400 font-medium">データはブラウザに自動保存されます</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* --- Payday Aggregation Dialog --- */}
+      <Dialog open={isPaydayAggregationOpen} onOpenChange={setIsPaydayAggregationOpen}>
+        <DialogContent className="sm:max-w-2xl rounded-[2.5rem] p-0 overflow-hidden border-none shadow-2xl bg-gray-50/50">
+          <div className="bg-zinc-900 p-8 border-b border-zinc-800">
+            <DialogHeader>
+              <DialogTitle className="text-3xl font-black tracking-tighter text-white flex items-center gap-3">
+                <CircleDollarSign strokeWidth={1.5} className="w-10 h-10 text-zinc-400" />
+                支払日ごとの集計
+              </DialogTitle>
+              <p className="text-zinc-500 text-xs font-bold mt-2 uppercase tracking-widest pl-1">設定に基づいた見込み額</p>
+            </DialogHeader>
+          </div>
+          <div className="p-8 space-y-4 max-h-[70vh] overflow-y-auto">
+            {paydayAggregations.filter(agg => agg.name !== "未設定").length === 0 ? (
+              <div className="py-20 text-center border-4 border-dashed border-gray-200 rounded-[3rem]">
+                <p className="text-lg font-bold text-gray-400">集計データがありません</p>
+                <p className="text-xs text-gray-400 mt-2">設定から締日・支払日を設定してください。</p>
+              </div>
+            ) : (
+              paydayAggregations.filter(agg => agg.name !== "未設定").map(agg => (
+                <div key={agg.name} className="bg-white p-6 rounded-[2rem] border border-gray-100/50 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
+                  <div>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">支払日</p>
+                    <p className="text-2xl font-black text-gray-800 tracking-tighter">{agg.name}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">見込み額</p>
+                    <p className="text-4xl font-black text-zinc-900 tracking-tighter">¥{agg.total.toLocaleString()}</p>
+                    <p className="text-[10px] text-gray-400 font-bold tracking-tighter mt-1">給与: ¥{agg.salary.toLocaleString()} + 交通費: ¥{agg.commuting.toLocaleString()}</p>
+                  </div>
+                </div>
+              ))
+            )}
+
+            {/* 未設定分の集計がある場合は表示 */}
+            {paydayAggregations.find(agg => agg.name === "未設定") && (
+              <div className="mt-8 pt-8 border-t border-gray-200/50">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 pl-2">締日・支払日が未設定の記録</p>
+                {(() => {
+                  const unassigned = paydayAggregations.find(agg => agg.name === "未設定");
+                  return unassigned ? (
+                    <div className="bg-gray-100/50 p-6 rounded-[2rem] border border-gray-200/50 flex items-center justify-between opacity-80">
+                      <div>
+                        <p className="text-lg font-black text-gray-500 tracking-tighter">未設定</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-black text-gray-600 tracking-tighter">¥{unassigned.total.toLocaleString()}</p>
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
