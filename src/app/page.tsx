@@ -1199,9 +1199,33 @@ function CalendarApp() {
         <DialogContent className="sm:max-w-[450px] rounded-[2rem] p-0 overflow-hidden border-none shadow-2xl">
           <div className="bg-blue-600 p-8 border-b border-blue-500">
             <DialogHeader>
-              <DialogTitle className="text-3xl font-black tracking-tighter text-white flex items-center gap-3">
-                <span className="bg-white/20 text-white w-12 h-12 rounded-2xl flex items-center justify-center text-xl pb-1">{editingEntry ? format(new Date(editingEntry.date), "d") : ""}</span>
-                {editingEntry ? format(new Date(editingEntry.date), "M月dd日 (E)", { locale: ja }) : ""}
+              <DialogTitle className="text-3xl font-black tracking-tighter text-white flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="bg-white/20 text-white w-12 h-12 rounded-2xl flex items-center justify-center text-xl pb-1">{editingEntry ? format(new Date(editingEntry.date), "d") : ""}</span>
+                  {editingEntry ? format(new Date(editingEntry.date), "M月dd日 (E)", { locale: ja }) : ""}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    if (!editingEntry) return;
+                    setFormDate(editFormDate);
+                    setFormStart(editFormStart);
+                    setFormEnd(editFormEnd);
+                    setFormPresetId(editFormPresetId);
+                    setFormCommuting(editFormCommuting);
+                    setFormCommPresetId(editFormCommPresetId);
+                    setFormWorkplace(editFormWorkplace);
+                    setDurationMinutes(editDurationMinutes);
+                    setIsCopying(true);
+                    setIsEditEntryOpen(false);
+                    setTimeout(() => setIsAddEntryOpen(true), 200);
+                  }}
+                  className="h-10 w-10 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all flex-shrink-0"
+                  title="この記録をコピー"
+                >
+                  <Copy className="h-5 w-5" />
+                </Button>
               </DialogTitle>
               <p className="text-blue-200 text-xs font-bold mt-1 uppercase tracking-widest">記録の編集</p>
             </DialogHeader>
@@ -1322,7 +1346,7 @@ function CalendarApp() {
                   if (editingEntry) deleteEntry(editingEntry.id, { stopPropagation: () => { } } as any);
                   setIsEditEntryOpen(false);
                 }}
-                className="flex-1 h-16 rounded-[1.25rem] font-black text-xl border-2 border-red-200 text-red-500 hover:bg-red-50"
+                className="flex-1 h-16 rounded-[1.25rem] font-black text-xl border-2 border-red-200 text-red-500 hover:bg-red-50 px-0"
               >
                 削除
               </Button>
@@ -1342,7 +1366,7 @@ function CalendarApp() {
                   setIsEditEntryOpen(false);
                   setEditingEntry(null);
                 }}
-                className="flex-2 flex-1 h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-[1.25rem] font-black text-xl shadow-xl transition-all active:scale-95"
+                className="flex-[2] h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-[1.25rem] font-black text-xl shadow-xl transition-all active:scale-95 px-0"
               >
                 記録を更新
               </Button>
