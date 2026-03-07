@@ -152,7 +152,7 @@ function CalendarApp() {
   const [currentDate, setCurrentDate] = useState(new Date(2026, 2, 3)); // March 2026 as per screenshot
   const [viewMode, setViewMode] = useState<"day" | "week" | "month" | "year" | "list">("month");
   const [entries, setEntries] = useState<WorkEntry[]>([]);
-  const [filterPresetId, setFilterPresetId] = useState<string>("all");
+  const [filterPresetIds, setFilterPresetIds] = useState<string[]>([]);
   const [presets, setPresets] = useState<HourlyRatePreset[]>([
     { id: "1", name: "基本時給", rate: 3000, color: PRESET_COLORS[0], workplace: "自宅" },
     { id: "2", name: "品川学藝高校", rate: 5000, color: PRESET_COLORS[1], workplace: "品川" },
@@ -166,11 +166,11 @@ function CalendarApp() {
       // 基本的には currentDate の月に限定（リスト表示用）
       base = entries.filter(e => isSameMonth(new Date(e.date), currentDate));
     }
-    if (filterPresetId !== "all") {
-      base = base.filter(e => e.presetId === filterPresetId);
+    if (filterPresetIds.length > 0) {
+      base = base.filter(e => filterPresetIds.includes(e.presetId));
     }
     return base.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [entries, currentDate, filterPresetId, viewMode]);
+  }, [entries, currentDate, filterPresetIds, viewMode]);
 
   const summary = useMemo(() => {
     return filteredEntries.reduce((acc, curr) => {
@@ -880,25 +880,36 @@ function CalendarApp() {
 
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant={filterPresetId !== "all" ? "default" : "secondary"} size="icon" className={cn("h-10 w-12 rounded-md", filterPresetId !== "all" ? "bg-blue-600 text-white" : "bg-gray-100/50")}>
+                <Button variant={filterPresetIds.length > 0 ? "default" : "secondary"} size="icon" className={cn("h-10 w-12 rounded-md", filterPresetIds.length > 0 ? "bg-blue-600 text-white" : "bg-gray-100/50")}>
                   <Filter className="h-5 w-5" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-56 p-2 rounded-2xl shadow-2xl border-none">
                 <div className="space-y-1">
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest p-2">表示を絞り込む</p>
-                  <button onClick={() => setFilterPresetId("all")} className={cn("w-full text-left px-3 py-2 rounded-xl text-sm font-bold flex items-center justify-between", filterPresetId === "all" ? "bg-blue-50 text-blue-600" : "hover:bg-gray-50")}>
-                    すべて表示 {filterPresetId === "all" && <CheckSquare className="h-4 w-4" />}
+                  <button onClick={() => setFilterPresetIds([])} className={cn("w-full text-left px-3 py-2 rounded-xl text-sm font-bold flex items-center justify-between", filterPresetIds.length === 0 ? "bg-blue-50 text-blue-600" : "hover:bg-gray-50")}>
+                    すべて表示 {filterPresetIds.length === 0 && <CheckSquare className="h-4 w-4" />}
                   </button>
-                  {presets.map(p => (
-                    <button key={p.id} onClick={() => setFilterPresetId(p.id)} className={cn("w-full text-left px-3 py-2 rounded-xl text-sm font-bold flex items-center justify-between", filterPresetId === p.id ? "bg-blue-50 text-blue-600" : "hover:bg-gray-50")}>
-                      <div className="flex items-center gap-2">
-                        <div className={cn("w-2 h-2 rounded-full", p.color?.split(" ")[0])} />
-                        {p.name}
-                      </div>
-                      {filterPresetId === p.id && <CheckSquare className="h-4 w-4" />}
-                    </button>
-                  ))}
+                  {presets.map(p => {
+                    const isActive = filterPresetIds.includes(p.id);
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => {
+                          setFilterPresetIds(prev =>
+                            prev.includes(p.id) ? prev.filter(id => id !== p.id) : [...prev, p.id]
+                          );
+                        }}
+                        className={cn("w-full text-left px-3 py-2 rounded-xl text-sm font-bold flex items-center justify-between", isActive ? "bg-blue-50 text-blue-600" : "hover:bg-gray-50")}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={cn("w-2 h-2 rounded-full", p.color?.split(" ")[0])} />
+                          {p.name}
+                        </div>
+                        {isActive && <CheckSquare className="h-4 w-4" />}
+                      </button>
+                    );
+                  })}
                 </div>
               </PopoverContent>
             </Popover>
