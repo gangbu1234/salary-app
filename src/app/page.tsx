@@ -16,6 +16,9 @@ import {
   isSameMonth,
   isSameDay,
   addDays,
+  subDays,
+  addWeeks,
+  subWeeks,
   addMinutes,
   parse
 } from "date-fns";
@@ -896,10 +899,20 @@ function CalendarApp() {
               )}
             </h1>
             <div className="flex items-center gap-1 ml-4 scale-75 md:scale-100 origin-left">
-              <Button variant="ghost" size="icon" onClick={() => setCurrentDate(viewMode === "year" ? subYears(currentDate, 1) : subMonths(currentDate, 1))}>
+              <Button variant="ghost" size="icon" onClick={() => {
+                if (viewMode === "year") setCurrentDate(subYears(currentDate, 1));
+                else if (viewMode === "month" || viewMode === "list") setCurrentDate(subMonths(currentDate, 1));
+                else if (viewMode === "week") setCurrentDate(subWeeks(currentDate, 1));
+                else if (viewMode === "day") setCurrentDate(subDays(currentDate, 1));
+              }}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" onClick={() => setCurrentDate(viewMode === "year" ? addYears(currentDate, 1) : addMonths(currentDate, 1))}>
+              <Button variant="ghost" size="icon" onClick={() => {
+                if (viewMode === "year") setCurrentDate(addYears(currentDate, 1));
+                else if (viewMode === "month" || viewMode === "list") setCurrentDate(addMonths(currentDate, 1));
+                else if (viewMode === "week") setCurrentDate(addWeeks(currentDate, 1));
+                else if (viewMode === "day") setCurrentDate(addDays(currentDate, 1));
+              }}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
