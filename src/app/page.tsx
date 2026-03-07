@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   format,
   addMonths,
@@ -206,6 +206,57 @@ function CalendarApp() {
   const [dragStartToggleY, setDragStartToggleY] = useState(0);
   const [durationMinutes, setDurationMinutes] = useState(180); // Default 3 hours
   const [isCopying, setIsCopying] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<WorkEntry | null>(null);
+  const [isEditEntryOpen, setIsEditEntryOpen] = useState(false);
+
+  // 編集用フォーム（編集ダイアログ専用）
+  const [editFormDate, setEditFormDate] = useState<Date>(new Date());
+  const [editFormStart, setEditFormStart] = useState("09:00");
+  const [editFormEnd, setEditFormEnd] = useState("12:00");
+  const [editFormPresetId, setEditFormPresetId] = useState("1");
+  const [editFormCommPresetId, setEditFormCommPresetId] = useState<string>("c2");
+  const [editFormCommuting, setEditFormCommuting] = useState(1200);
+  const [editFormWorkplace, setEditFormWorkplace] = useState("");
+  const [editDurationMinutes, setEditDurationMinutes] = useState(180);
+
+  const openEditModal = (entry: WorkEntry) => {
+    setEditingEntry(entry);
+    setEditFormDate(new Date(entry.date));
+    setEditFormStart(entry.startTime);
+    setEditFormEnd(entry.endTime);
+    setEditFormPresetId(entry.presetId);
+    setEditFormCommuting(entry.commuting);
+    setEditFormCommPresetId(entry.commutingPresetId || "");
+    setEditFormWorkplace(entry.workplace || "");
+    try {
+      const start = parse(entry.startTime, "HH:mm", new Date());
+      const end = parse(entry.endTime, "HH:mm", new Date());
+      let diff = differenceInMinutes(end, start);
+      if (diff < 0) diff += 24 * 60;
+      setEditDurationMinutes(diff);
+    } catch (e) { }
+    setIsEditEntryOpen(true);
+  };
+
+  // 編集用 endTime 自動更新
+  useEffect(() => {
+    try {
+      const start = parse(editFormStart, "HH:mm", new Date());
+      const end = addMinutes(start, editDurationMinutes);
+      setEditFormEnd(format(end, "HH:mm"));
+    } catch (e) { }
+  }, [editFormStart, editDurationMinutes]);
+
+  const handleEditEndTimeChange = (val: string) => {
+    setEditFormEnd(val);
+    try {
+      const start = parse(editFormStart, "HH:mm", new Date());
+      const end = parse(val, "HH:mm", new Date());
+      let diff = differenceInMinutes(end, start);
+      if (diff < 0) diff += 24 * 60;
+      setEditDurationMinutes(diff);
+    } catch (e) { }
+  };
 
   // Update endTime when startTime or duration changes
   useEffect(() => {
@@ -381,7 +432,7 @@ function CalendarApp() {
                 const preset = presets.find(p => p.id === entry.presetId);
                 const minutes = calculateDuration(entry.startTime, entry.endTime);
                 return (
-                  <div key={entry.id} className="flex items-center justify-between p-8 bg-gray-50 rounded-[2.5rem] border border-gray-100 group">
+                  <div key={entry.id} onClick={() => openEditModal(entry)} className="cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between p-8 bg-gray-50 rounded-[2.5rem] border border-gray-100 group">
                     <div className="flex items-center gap-6">
                       <div className={cn("w-4 h-16 rounded-full", preset?.color?.split(" ")[0])} />
                       <div>
@@ -399,7 +450,7 @@ function CalendarApp() {
                   </div>
                 );
               })}
-              <Button variant="outline" className="w-full h-24 rounded-[2.5rem] border-dashed border-2 text-gray-400 text-xl font-bold" onClick={() => setIsAddEntryOpen(true)}>
+              <Button variant="outline" className="w-full h-24 rounded-[2.5rem] border-dashed border-2 text-gray-400 text-xl font-bold" onClick={() => { setIsCopying(false); setIsAddEntryOpen(true); }}>
                 <Plus className="mr-2" /> 新しい勤務を追加
               </Button>
             </div>
@@ -432,12 +483,7 @@ function CalendarApp() {
                         return (
                           <div
                             key={entry.id}
-                            onClick={() => {
-                              setFormDate(day);
-                              setCurrentDate(day);
-                              // Keep viewMode as "week"
-                              setIsAddEntryOpen(true);
-                            }}
+                            onClick={() => openEditModal(entry)}
                             className={cn("p-3 rounded-xl border-l-[4px] shadow-sm bg-white border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors group relative", preset?.color?.replace("bg-", "border-"))}
                           >
                             <p className="text-[10px] font-black text-gray-400">{entry.startTime} - {entry.endTime}</p>
@@ -455,7 +501,7 @@ function CalendarApp() {
                           </div>
                         );
                       })}
-                      <Button variant="ghost" className="w-full h-12 border-2 border-dashed border-gray-200 rounded-xl text-gray-300" onClick={() => { setFormDate(day); setIsAddEntryOpen(true); }}>
+                      <Button variant="ghost" className="w-full h-12 border-2 border-dashed border-gray-200 rounded-xl text-gray-300" onClick={() => { setFormDate(day); setIsCopying(false); setIsAddEntryOpen(true); }}>
                         <Plus className="h-4 w-4" />
                       </Button>
                     </div>
@@ -503,7 +549,7 @@ function CalendarApp() {
                         const minutes = calculateDuration(entry.startTime, entry.endTime);
                         const salary = Math.round((minutes / 60) * (preset?.rate || 0));
                         return (
-                          <tr key={entry.id} className="hover:bg-gray-50/50 transition-colors group">
+                          <tr key={entry.id} onClick={() => openEditModal(entry)} className="cursor-pointer hover:bg-gray-50/50 transition-colors group">
                             <td className="px-8 py-6">
                               <p className="text-lg font-black text-gray-800">{format(new Date(entry.date), "dd (E)", { locale: ja })}</p>
                             </td>
@@ -624,9 +670,7 @@ function CalendarApp() {
                             key={entry.id}
                             onClick={(e) => {
                               e.stopPropagation();
-                              setFormDate(day);
-                              setCurrentDate(day);
-                              setIsAddEntryOpen(true);
+                              openEditModal(entry);
                             }}
                             className={cn(
                               "px-2 py-[4px] rounded-[3px] text-[10px] font-bold leading-none truncate shadow-sm flex items-center justify-between gap-1.5 border-l-[3px] border-black/10 transition-transform active:scale-95 group/entry",
@@ -683,7 +727,7 @@ function CalendarApp() {
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <Button variant="secondary" size="icon" className="h-10 w-12 bg-gray-100/50 rounded-md" onClick={() => setIsAddEntryOpen(true)}>
+            <Button variant="secondary" size="icon" className="h-10 w-12 bg-gray-100/50 rounded-md" onClick={() => { setFormDate(new Date()); setIsCopying(false); setIsAddEntryOpen(true); }}>
               <Plus className="h-6 w-6 text-gray-600" />
             </Button>
             <Button variant="secondary" size="icon" className="h-10 w-12 bg-gray-100/50 rounded-md">
@@ -857,7 +901,7 @@ function CalendarApp() {
       </aside>
 
       {/* --- Add Entry Dialog (Day Details) --- */}
-      <Dialog open={isAddEntryOpen} onOpenChange={setIsAddEntryOpen}>
+      <Dialog open={isAddEntryOpen} onOpenChange={(open) => { setIsAddEntryOpen(open); if (!open) setIsCopying(false); }}>
         <DialogContent className="sm:max-w-[450px] rounded-[2rem] p-0 overflow-hidden border-none shadow-2xl">
           <div className="bg-gray-50/50 p-8 border-b border-gray-100">
             <DialogHeader>
@@ -879,12 +923,14 @@ function CalendarApp() {
                   {getDailyEntries(formDate).map(entry => {
                     const preset = presets.find(p => p.id === entry.presetId);
                     return (
-                      <div key={entry.id} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-100 shadow-sm group transition-all hover:border-blue-200">
+                      <div key={entry.id} onClick={() => openEditModal(entry)} className="cursor-pointer flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-100 shadow-sm group transition-all hover:border-blue-200 hover:bg-gray-50">
                         <div className="flex items-center gap-4">
-                          <div className={cn("w-2 h-10 rounded-full", preset?.color.split(" ")[0])} />
+                          <div className={cn("w-2 h-10 rounded-full", preset?.color?.split(" ")[0])} />
                           <div>
                             <p className="font-black text-lg tracking-tighter">{entry.startTime} - {entry.endTime}</p>
-                            <p className="text-xs font-bold text-gray-400">{preset?.name}</p>
+                            <p className="text-xs font-bold text-gray-400">
+                              {(entry.workplace || preset?.workplace) ? `${entry.workplace || preset?.workplace} @ ` : ""}{preset?.name}
+                            </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-1">
@@ -928,7 +974,7 @@ function CalendarApp() {
 
             <hr className="border-gray-100" />
 
-            {/* New Entry Form */}
+            {/* New Entry Form - always new entry mode */}
             <div className={cn("space-y-6 p-6 rounded-[1.5rem] border-2 transition-all", isCopying ? "bg-blue-50/50 border-blue-200 border-dashed" : "border-transparent")}>
               <div className="flex items-center justify-between pl-1">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{isCopying ? "コピー中..." : "新規登録"}</p>
@@ -1055,6 +1101,163 @@ function CalendarApp() {
                 setIsCopying(false);
               }} className="w-full h-16 bg-zinc-900 hover:bg-black text-white rounded-[1.25rem] font-black text-xl shadow-xl transition-all active:scale-95">
                 {isCopying ? "記録を貼り付け（追加）" : "記録を追加"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* --- Edit Entry Dialog (別ダイアログ) --- */}
+      <Dialog open={isEditEntryOpen} onOpenChange={(open) => { setIsEditEntryOpen(open); if (!open) setEditingEntry(null); }}>
+        <DialogContent className="sm:max-w-[450px] rounded-[2rem] p-0 overflow-hidden border-none shadow-2xl">
+          <div className="bg-blue-600 p-8 border-b border-blue-500">
+            <DialogHeader>
+              <DialogTitle className="text-3xl font-black tracking-tighter text-white flex items-center gap-3">
+                <span className="bg-white/20 text-white w-12 h-12 rounded-2xl flex items-center justify-center text-xl pb-1">{editingEntry ? format(new Date(editingEntry.date), "d") : ""}</span>
+                {editingEntry ? format(new Date(editingEntry.date), "M月dd日 (E)", { locale: ja }) : ""}
+              </DialogTitle>
+              <p className="text-blue-200 text-xs font-bold mt-1 uppercase tracking-widest">記録の編集</p>
+            </DialogHeader>
+          </div>
+
+          <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-gray-500 ml-1">日付</Label>
+              <div className="relative">
+                <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-300" />
+                <input
+                  type="date"
+                  value={format(editFormDate, "yyyy-MM-dd")}
+                  onChange={(e) => setEditFormDate(new Date(e.target.value))}
+                  className="w-full rounded-2xl h-14 text-xl font-black bg-gray-50 border-none shadow-inner pl-12 pr-4 focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-gray-500 ml-1">開始時間</Label>
+                <input type="time" value={editFormStart} onChange={(e) => setEditFormStart(e.target.value)} className="w-full rounded-2xl h-14 text-xl font-black bg-gray-50 border-none shadow-inner px-4 focus:ring-2 focus:ring-blue-500 outline-none" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-gray-500 ml-1">終了時間</Label>
+                <input type="time" value={editFormEnd} onChange={(e) => handleEditEndTimeChange(e.target.value)} className="w-full rounded-2xl h-14 text-xl font-black bg-gray-50 border-none shadow-inner px-4 focus:ring-2 focus:ring-blue-500 outline-none" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-gray-500 ml-1">勤務時間 (分)</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  value={editDurationMinutes}
+                  onChange={(e) => setEditDurationMinutes(Number(e.target.value))}
+                  className="h-14 rounded-2xl text-xl font-black bg-gray-50 border-none shadow-inner"
+                />
+                <div className="flex items-center text-gray-400 font-bold pr-2">分</div>
+              </div>
+              <div className="flex gap-2 flex-wrap pt-1">
+                {[30, 60, 90, 120, 180, 240, 300, 360].map(m => (
+                  <Button key={m} variant="outline" size="sm" onClick={() => setEditDurationMinutes(m)} className="rounded-full text-[10px] h-7 px-3">
+                    {m >= 60 ? `${m / 60}h` : `${m}m`}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-gray-500 ml-1">勤務先 / 備考</Label>
+              <div className="relative">
+                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-300" />
+                <Input
+                  value={editFormWorkplace}
+                  onChange={(e) => setEditFormWorkplace(e.target.value)}
+                  placeholder="例: 文京区, 本社など"
+                  className="pl-12 h-14 rounded-2xl text-xl font-black bg-gray-50 border-none shadow-inner"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-gray-500 ml-1">勤務先 / 時給プリセット</Label>
+              <Select value={editFormPresetId} onValueChange={(val) => {
+                setEditFormPresetId(val);
+                const p = presets.find(x => x.id === val);
+                if (p && !editFormWorkplace) setEditFormWorkplace(p.workplace || "");
+              }}>
+                <SelectTrigger className="h-14 rounded-2xl text-lg font-bold bg-gray-50 border-none shadow-inner px-5">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl border-none shadow-2xl">
+                  {presets.map(p => (
+                    <SelectItem key={p.id} value={p.id} className="py-3 rounded-xl">
+                      <span className="font-bold">{p.name}</span>
+                      <span className="ml-2 text-blue-600 font-black">¥{p.rate.toLocaleString()}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-gray-500 ml-1">交通費プリセット</Label>
+              <Select value={editFormCommPresetId} onValueChange={(val) => {
+                setEditFormCommPresetId(val);
+                const p = commPresets.find(cp => cp.id === val);
+                if (p) setEditFormCommuting(p.amount);
+              }}>
+                <SelectTrigger className="h-14 rounded-2xl text-lg font-bold bg-gray-50 border-none shadow-inner px-5">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl border-none shadow-2xl">
+                  {commPresets.map(p => (
+                    <SelectItem key={p.id} value={p.id} className="py-3 rounded-xl">
+                      <span className="font-bold">{p.name}</span>
+                      <span className="ml-2 text-emerald-600 font-black">¥{p.amount.toLocaleString()}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-gray-500 ml-1">交通費 (調整/手入力)</Label>
+              <div className="relative">
+                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-300" />
+                <Input type="number" value={editFormCommuting} onChange={(e) => setEditFormCommuting(Number(e.target.value))} className="pl-12 h-14 rounded-2xl text-xl font-black bg-gray-50 border-none shadow-inner" />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (editingEntry) deleteEntry(editingEntry.id, { stopPropagation: () => { } } as any);
+                  setIsEditEntryOpen(false);
+                }}
+                className="flex-1 h-16 rounded-[1.25rem] font-black text-xl border-2 border-red-200 text-red-500 hover:bg-red-50"
+              >
+                削除
+              </Button>
+              <Button
+                onClick={() => {
+                  if (!editingEntry) return;
+                  setEntries(prev => prev.map(ent => ent.id === editingEntry.id ? {
+                    ...ent,
+                    date: editFormDate.toISOString(),
+                    startTime: editFormStart,
+                    endTime: editFormEnd,
+                    presetId: editFormPresetId,
+                    commuting: editFormCommuting,
+                    commutingPresetId: editFormCommPresetId,
+                    workplace: editFormWorkplace
+                  } : ent));
+                  setIsEditEntryOpen(false);
+                  setEditingEntry(null);
+                }}
+                className="flex-2 flex-1 h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-[1.25rem] font-black text-xl shadow-xl transition-all active:scale-95"
+              >
+                記録を更新
               </Button>
             </div>
           </div>
@@ -1199,9 +1402,7 @@ function CalendarApp() {
                     className="p-4 rounded-2xl bg-gray-50 flex items-center gap-4 cursor-pointer hover:bg-gray-100 transition-colors"
                     onClick={() => {
                       setIsDayPopupOpen(false);
-                      setFormDate(selectedDayPopup);
-                      setCurrentDate(selectedDayPopup);
-                      setIsAddEntryOpen(true);
+                      openEditModal(entry);
                     }}
                   >
                     <div className={cn("w-2 h-10 rounded-full flex-shrink-0", preset?.color?.split(" ")[0])} />
@@ -1229,7 +1430,7 @@ function CalendarApp() {
                     setCurrentDate(selectedDayPopup);
                     setIsDayPopupOpen(false);
                     // Slight delay to allow popup to close before opening the form
-                    setTimeout(() => setIsAddEntryOpen(true), 150);
+                    setTimeout(() => { setIsCopying(false); setIsAddEntryOpen(true); }, 150);
                   }
                 }}
               >
