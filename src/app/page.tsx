@@ -921,9 +921,6 @@ function CalendarApp() {
             <Button variant="secondary" size="icon" className="h-10 w-12 bg-gray-100/50 rounded-md" onClick={() => { setFormDate(currentDate); setIsCopying(false); setIsAddEntryOpen(true); }}>
               <Plus className="h-6 w-6 text-gray-600" />
             </Button>
-            <Button variant="secondary" size="icon" className="h-10 w-12 bg-gray-100/50 rounded-md">
-              <CheckSquare className="h-5 w-5 text-gray-600" />
-            </Button>
 
             {/* Filter Toggle */}
             <Button variant="ghost" size="icon" className="h-10 w-12 rounded-md" onClick={loadData} disabled={isSyncing}>
@@ -978,6 +975,39 @@ function CalendarApp() {
             </div>
           </div>
         </header>
+
+        {/* Mobile Filter Chips */}
+        <div className="md:hidden flex items-center gap-2 overflow-x-auto px-6 py-3 border-b border-gray-100 bg-white scrollbar-hide">
+          <button
+            onClick={() => setFilterPresetIds([])}
+            className={cn(
+              "whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all",
+              filterPresetIds.length === 0 ? "bg-zinc-900 text-white shadow-lg shadow-zinc-200" : "bg-gray-100 text-gray-500"
+            )}
+          >
+            すべて
+          </button>
+          {presets.map(p => {
+            const isActive = filterPresetIds.includes(p.id);
+            return (
+              <button
+                key={p.id}
+                onClick={() => {
+                  setFilterPresetIds(prev =>
+                    prev.includes(p.id) ? prev.filter(id => id !== p.id) : [...prev, p.id]
+                  );
+                }}
+                className={cn(
+                  "whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2",
+                  isActive ? "bg-zinc-900 text-white shadow-lg shadow-zinc-200" : "bg-gray-100 text-gray-500"
+                )}
+              >
+                <div className={cn("w-2 h-2 rounded-full", p.color?.split(" ")[0])} />
+                {p.name}
+              </button>
+            );
+          })}
+        </div>
 
 
 
