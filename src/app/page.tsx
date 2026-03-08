@@ -976,40 +976,43 @@ function CalendarApp() {
           </div>
         </header>
 
-        {/* Mobile Filter Chips - Only show in Month view */}
-        {viewMode === "month" && (
-          <div className="md:hidden flex items-center gap-2 overflow-x-auto px-6 py-3 border-b border-gray-100 bg-white scrollbar-hide">
-            <button
-              onClick={() => setFilterPresetIds([])}
-              className={cn(
-                "whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all",
-                filterPresetIds.length === 0 ? "bg-zinc-900 text-white shadow-lg shadow-zinc-200" : "bg-gray-100 text-gray-500"
-              )}
-            >
-              すべて
-            </button>
-            {presets.map(p => {
-              const isActive = filterPresetIds.includes(p.id);
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => {
-                    setFilterPresetIds(prev =>
-                      prev.includes(p.id) ? prev.filter(id => id !== p.id) : [...prev, p.id]
-                    );
-                  }}
-                  className={cn(
-                    "whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2",
-                    isActive ? "bg-zinc-900 text-white shadow-lg shadow-zinc-200" : "bg-gray-100 text-gray-500"
-                  )}
-                >
-                  <div className={cn("w-2 h-2 rounded-full", p.color?.split(" ")[0])} />
-                  {p.name}
-                </button>
-              );
-            })}
-          </div>
-        )}
+        {/* PC Filter Chips - Visible only on PC, for all modes */}
+        <div className="hidden md:flex items-center gap-3 px-8 py-3 border-b border-gray-50 bg-white scrollbar-hide">
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mr-2">表示を絞り込む</p>
+          <button
+            onClick={() => setFilterPresetIds([])}
+            className={cn(
+              "whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border",
+              filterPresetIds.length === 0
+                ? "bg-zinc-900 text-white border-zinc-900 shadow-sm"
+                : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"
+            )}
+          >
+            すべて表示
+          </button>
+          {presets.map(p => {
+            const isActive = filterPresetIds.includes(p.id);
+            return (
+              <button
+                key={p.id}
+                onClick={() => {
+                  setFilterPresetIds(prev =>
+                    prev.includes(p.id) ? prev.filter(id => id !== p.id) : [...prev, p.id]
+                  );
+                }}
+                className={cn(
+                  "whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 border",
+                  isActive
+                    ? "bg-zinc-900 text-white border-zinc-900 shadow-sm"
+                    : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"
+                )}
+              >
+                <div className={cn("w-2 h-2 rounded-full", p.color?.split(" ")[0])} />
+                {p.name}
+              </button>
+            );
+          })}
+        </div>
 
 
 
