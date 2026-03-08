@@ -156,17 +156,27 @@ function CalendarApp() {
     const dateB = startOfDay(new Date(b.date)).getTime();
     if (dateA !== dateB) return dateA - dateB;
 
-    // 2. 表示順（固定オーダー）があれば優先
-    // 記録自身のオーダーがなければ、プリセットのデフォルトオーダーを参照
-    const presetA = presetList.find(p => p.id === a.presetId);
-    const presetB = presetList.find(p => p.id === b.presetId);
+    // 2. 表示順（固定オーダー）の取得
+    const getEffectiveOrder = (ent: WorkEntry) => {
+      // 記録個別の設定があるかチェック (0は有効な値)
+      if (ent.displayOrder !== undefined && ent.displayOrder !== null && (ent.displayOrder as any) !== "") {
+        return Number(ent.displayOrder);
+      }
+      // プリセット側の設定をチェック
+      const p = presetList.find(curr => curr.id === ent.presetId);
+      if (p?.displayOrder !== undefined && p?.displayOrder !== null && (p?.displayOrder as any) !== "") {
+        return Number(p.displayOrder);
+      }
+      // 設定がなければ標準(1000)
+      return 1000;
+    };
 
-    const orderA = a.displayOrder ?? presetA?.displayOrder ?? 999;
-    const orderB = b.displayOrder ?? presetB?.displayOrder ?? 999;
+    const orderA = getEffectiveOrder(a);
+    const orderB = getEffectiveOrder(b);
 
     if (orderA !== orderB) return orderA - orderB;
 
-    // 3. 時間順
+    // 3. 時間順 (HH:mm 文字列比較)
     return a.startTime.localeCompare(b.startTime);
   };
 
@@ -1323,9 +1333,9 @@ function CalendarApp() {
                       const cp = commPresets.find(c => c.id === p.linkedCommutingPresetId);
                       if (cp) setFormCommuting(cp.amount);
                     }
-                    if (p.displayOrder !== undefined) {
-                      setFormDisplayOrder(p.displayOrder);
-                    } else if (formDisplayOrder !== "") {
+                    if (p.displayOrder !== undefined && p.displayOrder !== null && p.displayOrder !== "") {
+                      setFormDisplayOrder(Number(p.displayOrder));
+                    } else {
                       setFormDisplayOrder("");
                     }
                   }
@@ -1507,9 +1517,9 @@ function CalendarApp() {
                     const cp = commPresets.find(c => c.id === p.linkedCommutingPresetId);
                     if (cp) setEditFormCommuting(cp.amount);
                   }
-                  if (p.displayOrder !== undefined) {
-                    setEditFormDisplayOrder(p.displayOrder);
-                  } else if (editFormDisplayOrder !== "") {
+                  if (p.displayOrder !== undefined && p.displayOrder !== null && p.displayOrder !== "") {
+                    setEditFormDisplayOrder(Number(p.displayOrder));
+                  } else {
                     setEditFormDisplayOrder("");
                   }
                 }
