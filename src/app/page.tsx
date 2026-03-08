@@ -66,6 +66,7 @@ interface HourlyRatePreset {
   closingDay?: number;
   paymentMonthOffset?: number;
   paymentDay?: number;
+  displayOrder?: number;
 }
 
 interface CommutingPreset {
@@ -672,13 +673,13 @@ function CalendarApp() {
 
       case "list":
         return (
-          <div className="flex-1 overflow-y-auto p-12 bg-white space-y-12">
-            <div className="flex items-end justify-between border-b-4 border-gray-900 pb-6">
-              <h2 className="text-7xl font-black tracking-tighter text-gray-900">{format(currentDate, "yyyy M月")}</h2>
+          <div className="flex-1 overflow-y-auto p-6 md:p-12 bg-white space-y-8 md:space-y-12">
+            <div className="flex items-end justify-between border-b-4 border-gray-900 pb-4 md:pb-6">
+              <h2 className="text-4xl md:text-7xl font-black tracking-tighter text-gray-900">{format(currentDate, "yyyy M月")}</h2>
               <div className="text-right space-y-1">
-                <p className="text-sm font-black text-gray-400 uppercase tracking-widest">対象期間 合計額</p>
-                <p className="text-6xl font-black text-blue-600 tracking-tighter">¥{summary.total.toLocaleString()}</p>
-                <div className="flex justify-end gap-4 text-xs font-bold text-gray-400 mt-2">
+                <p className="text-[10px] md:text-sm font-black text-gray-400 uppercase tracking-widest">対象期間 合計額</p>
+                <p className="text-3xl md:text-6xl font-black text-blue-600 tracking-tighter">¥{summary.total.toLocaleString()}</p>
+                <div className="flex justify-end gap-2 md:gap-4 text-[10px] md:text-xs font-bold text-gray-400 mt-2">
                   <span>給与: ¥{summary.salary.toLocaleString()}</span>
                   <span>交通費: ¥{summary.commuting.toLocaleString()}</span>
                 </div>
@@ -1682,6 +1683,16 @@ function CalendarApp() {
                             </SelectContent>
                           </Select>
                         </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold text-gray-400">表示順 (追加時のデフォルト)</Label>
+                        <Input
+                          type="number"
+                          className="h-8 rounded-xl text-[10px] font-bold bg-gray-50 border-none px-3"
+                          value={p.displayOrder ?? ""}
+                          onChange={(e) => setPresets(presets.map(x => x.id === p.id ? { ...x, displayOrder: e.target.value === "" ? undefined : Number(e.target.value) } : x))}
+                          placeholder="未設定"
+                        />
                       </div>
                     </div>
                   </div>
