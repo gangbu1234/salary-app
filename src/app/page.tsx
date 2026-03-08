@@ -150,15 +150,20 @@ function CalendarApp() {
     }
   }
 
-  const sortWorkEntries = (a: WorkEntry, b: WorkEntry) => {
-    // 1. 日付順
+  const sortWorkEntries = (a: WorkEntry, b: WorkEntry, presetList: HourlyRatePreset[]) => {
+    // 1. 日付順 (同一日は 0)
     const dateA = startOfDay(new Date(a.date)).getTime();
     const dateB = startOfDay(new Date(b.date)).getTime();
     if (dateA !== dateB) return dateA - dateB;
 
     // 2. 表示順（固定オーダー）があれば優先
-    const orderA = a.displayOrder ?? 999;
-    const orderB = b.displayOrder ?? 999;
+    // 記録自身のオーダーがなければ、プリセットのデフォルトオーダーを参照
+    const presetA = presetList.find(p => p.id === a.presetId);
+    const presetB = presetList.find(p => p.id === b.presetId);
+
+    const orderA = a.displayOrder ?? presetA?.displayOrder ?? 999;
+    const orderB = b.displayOrder ?? presetB?.displayOrder ?? 999;
+
     if (orderA !== orderB) return orderA - orderB;
 
     // 3. 時間順
@@ -166,7 +171,7 @@ function CalendarApp() {
   };
 
   function getDailyEntries(day: Date) {
-    return entries.filter(ent => isSameDay(new Date(ent.date), day)).sort(sortWorkEntries);
+    return entries.filter(ent => isSameDay(new Date(ent.date), day)).sort((a, b) => sortWorkEntries(a, b, presets));
   }
 
   // --- State ---
@@ -190,8 +195,8 @@ function CalendarApp() {
     if (filterPresetIds.length > 0) {
       base = base.filter(e => filterPresetIds.includes(e.presetId));
     }
-    return base.sort(sortWorkEntries);
-  }, [entries, currentDate, filterPresetIds, viewMode]);
+    return [...base].sort((a, b) => sortWorkEntries(a, b, presets));
+  }, [entries, currentDate, filterPresetIds, viewMode, presets]);
 
   const summary = useMemo(() => {
     return filteredEntries.reduce((acc, curr) => {
@@ -1318,6 +1323,11 @@ function CalendarApp() {
                       const cp = commPresets.find(c => c.id === p.linkedCommutingPresetId);
                       if (cp) setFormCommuting(cp.amount);
                     }
+                    if (p.displayOrder !== undefined) {
+                      setFormDisplayOrder(p.displayOrder);
+                    } else if (formDisplayOrder !== "") {
+                      setFormDisplayOrder("");
+                    }
                   }
                 }}>
                   <SelectTrigger className="h-14 rounded-2xl text-lg font-bold bg-gray-50 border-none shadow-inner px-5">
@@ -1496,6 +1506,11 @@ function CalendarApp() {
                     setEditFormCommPresetId(p.linkedCommutingPresetId);
                     const cp = commPresets.find(c => c.id === p.linkedCommutingPresetId);
                     if (cp) setEditFormCommuting(cp.amount);
+                  }
+                  if (p.displayOrder !== undefined) {
+                    setEditFormDisplayOrder(p.displayOrder);
+                  } else if (editFormDisplayOrder !== "") {
+                    setEditFormDisplayOrder("");
                   }
                 }
               }}>
