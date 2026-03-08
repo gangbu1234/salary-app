@@ -67,7 +67,57 @@ interface HourlyRatePreset {
   paymentMonthOffset?: number;
   paymentDay?: number;
   displayOrder?: number;
+  withholdingType?: "none" | "salary_kou" | "salary_otsu" | "remuneration";
+  dependentsCount?: number;
 }
+
+const calculateWithholdingTax = (amount: number, type: string, dependents: number): number => {
+  if (!type || type === "none" || amount <= 0) return 0;
+
+  // 1. 報酬 (一律 10.21%)
+  if (type === "remuneration") {
+    if (amount <= 1000000) return Math.floor(amount * 0.1021);
+    return Math.floor((amount - 1000000) * 0.2042 + 102100);
+  }
+
+  // 2. 給与・乙欄 (令和6年度)
+  if (type === "salary_otsu") {
+    if (amount < 88000) return Math.floor(amount * 0.03063);
+    const table = [
+      { limit: 113000, tax: 3400 }, { limit: 151000, tax: 9200 },
+      { limit: 200000, tax: 16900 }, { limit: 247000, tax: 27200 },
+      { limit: 305000, tax: 41200 }, { limit: 350000, tax: 57000 },
+      { limit: 410000, tax: 74400 }, { limit: 480000, tax: 96600 },
+      { limit: 540000, tax: 122500 }, { limit: 640000, tax: 147600 },
+      { limit: 730000, tax: 187100 }, { limit: 870000, tax: 226700 },
+      { limit: 1000000, tax: 289800 }
+    ];
+    for (const step of table) { if (amount < step.limit) return step.tax; }
+    return Math.floor(amount * 0.35); // 100万超暫定
+  }
+
+  // 3. 給与・甲欄 (令和6年度)
+  if (type === "salary_kou") {
+    if (amount < 88000) return 0;
+    const depIdx = Math.min(dependents || 0, 7);
+    const thresholds = [88000, 101000, 114000, 127000, 140000, 153000, 166000, 179000];
+    if (amount < thresholds[depIdx]) return 0;
+
+    if (depIdx === 0) {
+      const steps = [
+        { limit: 89000, tax: 100 }, { limit: 90000, tax: 220 }, { limit: 91000, tax: 350 },
+        { limit: 92000, tax: 480 }, { limit: 93000, tax: 610 }, { limit: 100000, tax: 1520 },
+        { limit: 110000, tax: 2110 }, { limit: 120000, tax: 3080 }, { limit: 130000, tax: 4050 },
+        { limit: 140000, tax: 5020 }, { limit: 150000, tax: 5990 }, { limit: 200000, tax: 11750 }
+      ];
+      for (const step of steps) { if (amount < step.limit) return step.tax; }
+      return Math.floor(amount * 0.1);
+    }
+    // 扶養ありは現物確認が必要なため暫定的に扶養なしから一定減額を考慮(または0)
+    return 0;
+  }
+  return 0;
+};
 
 interface CommutingPreset {
   id: string;
@@ -216,16 +266,33 @@ function CalendarApp() {
   }, [entries, currentDate, filterPresetIds, viewMode, presets]);
 
   const summary = useMemo(() => {
-    return filteredEntries.reduce((acc, curr) => {
+    // 勤務先（payer）ごとに月間給与を集計して税額計算
+    const totalsByPreset: Record<string, { salary: number; commuting: number }> = {};
+    filteredEntries.forEach(curr => {
+      if (!totalsByPreset[curr.presetId]) totalsByPreset[curr.presetId] = { salary: 0, commuting: 0 };
       const preset = presets.find(p => p.id === curr.presetId);
       const minutes = calculateDuration(curr.startTime, curr.endTime);
       const salary = Math.round((minutes / 60) * (preset?.rate || 0));
-      return {
-        salary: acc.salary + salary,
-        commuting: acc.commuting + curr.commuting,
-        total: acc.total + salary + curr.commuting
-      };
-    }, { salary: 0, commuting: 0, total: 0 });
+      totalsByPreset[curr.presetId].salary += salary;
+      totalsByPreset[curr.presetId].commuting += curr.commuting;
+    });
+
+    let sTotal = 0, cTotal = 0, tTotal = 0;
+    Object.entries(totalsByPreset).forEach(([pid, data]) => {
+      const p = presets.find(x => x.id === pid);
+      const tax = calculateWithholdingTax(data.salary, p?.withholdingType || "none", p?.dependentsCount || 0);
+      sTotal += data.salary;
+      cTotal += data.commuting;
+      tTotal += tax;
+    });
+
+    return {
+      salary: sTotal,
+      commuting: cTotal,
+      tax: tTotal,
+      total: sTotal + cTotal - tTotal, // Net Pay
+      gross: sTotal + cTotal // Gross Total
+    };
   }, [filteredEntries, presets]);
   const [commPresets, setCommPresets] = useState<CommutingPreset[]>([
     { id: "c1", name: "電車定期内", amount: 0 },
@@ -699,11 +766,11 @@ function CalendarApp() {
             <div className="flex items-end justify-between border-b-4 border-gray-900 pb-4 md:pb-6">
               <h2 className="text-4xl md:text-7xl font-black tracking-tighter text-gray-900">{format(currentDate, "yyyy M月")}</h2>
               <div className="text-right space-y-1">
-                <p className="text-[10px] md:text-sm font-black text-gray-400 uppercase tracking-widest">対象期間 合計額</p>
-                <p className="text-3xl md:text-6xl font-black text-blue-600 tracking-tighter">¥{summary.total.toLocaleString()}</p>
+                <p className="text-[10px] md:text-sm font-black text-gray-400 uppercase tracking-widest">対象期間 手取り額</p>
+                <p className="text-3xl md:text-6xl font-black text-emerald-600 tracking-tighter">¥{summary.total.toLocaleString()}</p>
                 <div className="flex justify-end gap-2 md:gap-4 text-[10px] md:text-xs font-bold text-gray-400 mt-2">
-                  <span>給与: ¥{summary.salary.toLocaleString()}</span>
-                  <span>交通費: ¥{summary.commuting.toLocaleString()}</span>
+                  <span>額面: ¥{summary.gross.toLocaleString()}</span>
+                  <span className="text-rose-400">源泉税: ¥{summary.tax.toLocaleString()}</span>
                 </div>
               </div>
             </div>
@@ -1716,7 +1783,38 @@ function CalendarApp() {
                           </Select>
                         </div>
                       </div>
-                      <div className="space-y-1">
+                      <div className="pt-3 border-t border-gray-100 flex flex-col gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-[10px] font-bold text-gray-400">所得税 徴収区分 (毎年1月確認)</Label>
+                          <Select value={p.withholdingType || "none"} onValueChange={(val) => setPresets(presets.map(x => x.id === p.id ? { ...x, withholdingType: val as any } : x))}>
+                            <SelectTrigger className="h-8 rounded-xl text-[11px] font-black bg-gray-50 border-none px-3">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-none shadow-xl">
+                              <SelectItem value="none" className="text-xs">徴収なし</SelectItem>
+                              <SelectItem value="salary_kou" className="text-xs">給与・甲欄 (扶養控除申告あり)</SelectItem>
+                              <SelectItem value="salary_otsu" className="text-xs">給与・乙欄 (他が主、または申告なし)</SelectItem>
+                              <SelectItem value="remuneration" className="text-xs">報酬 (一律 10.21%)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {p.withholdingType === 'salary_kou' && (
+                          <div className="space-y-1">
+                            <Label className="text-[10px] font-bold text-gray-400">扶養親族等の数</Label>
+                            <Select value={(p.dependentsCount || 0).toString()} onValueChange={(val) => setPresets(presets.map(x => x.id === p.id ? { ...x, dependentsCount: parseInt(val) } : x))}>
+                              <SelectTrigger className="h-8 rounded-xl text-[11px] font-black bg-gray-50 border-none px-3">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="rounded-xl border-none shadow-xl">
+                                {[0, 1, 2, 3, 4, 5, 6, 7].map(n => (
+                                  <SelectItem key={n} value={n.toString()} className="text-xs">{n === 7 ? '7人以上' : `${n}人`}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                      </div>
+                      <div className="pt-3 border-t border-gray-100 space-y-1">
                         <Label className="text-[10px] font-bold text-gray-400">表示順 (追加時のデフォルト)</Label>
                         <Input
                           type="number"
