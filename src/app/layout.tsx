@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "給与売上概算",
   description: "勤務時間と時給から給与を概算するアプリ",
-  manifest: "/manifest.webmanifest",
+  manifest: "/manifest.json",
   themeColor: "#ffffff",
   appleWebApp: {
     capable: true,
@@ -23,6 +23,7 @@ export const metadata: Metadata = {
     title: "給与概算",
   },
   icons: {
+    icon: "/icon.png",
     apple: "/apple-touch-icon.png",
   },
 };
