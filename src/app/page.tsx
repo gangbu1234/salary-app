@@ -151,23 +151,25 @@ function CalendarApp() {
   }
 
   const sortWorkEntries = (a: WorkEntry, b: WorkEntry, presetList: HourlyRatePreset[]) => {
-    // 1. 日付順 (同一日は 0)
-    const dateA = startOfDay(new Date(a.date)).getTime();
-    const dateB = startOfDay(new Date(b.date)).getTime();
-    if (dateA !== dateB) return dateA - dateB;
+    // 1. 日付の数値化 (YYYYMMDD) による比較
+    const d1 = new Date(a.date);
+    const d2 = new Date(b.date);
+    const dayA = d1.getFullYear() * 10000 + (d1.getMonth() + 1) * 100 + d1.getDate();
+    const dayB = d2.getFullYear() * 10000 + (d2.getMonth() + 1) * 100 + d2.getDate();
+    if (dayA !== dayB) return dayA - dayB;
 
     // 2. 表示順（固定オーダー）の取得
     const getEffectiveOrder = (ent: WorkEntry) => {
-      // 記録個別の設定があるかチェック (0は有効な値)
-      if (ent.displayOrder !== undefined && ent.displayOrder !== null && (ent.displayOrder as any) !== "") {
-        return Number(ent.displayOrder);
+      // 記録個別の設定があるか (0を有効とするため typeof で判定)
+      if (typeof ent.displayOrder === 'number') {
+        return ent.displayOrder;
       }
       // プリセット側の設定をチェック
       const p = presetList.find(curr => curr.id === ent.presetId);
-      if (p?.displayOrder !== undefined && p?.displayOrder !== null && (p?.displayOrder as any) !== "") {
-        return Number(p.displayOrder);
+      if (typeof p?.displayOrder === 'number') {
+        return p.displayOrder;
       }
-      // 設定がなければ標準(1000)
+      // 設定がない場合は標準順位 (時間順が活きるように)
       return 1000;
     };
 
@@ -176,8 +178,13 @@ function CalendarApp() {
 
     if (orderA !== orderB) return orderA - orderB;
 
-    // 3. 時間順 (HH:mm 文字列比較)
-    return a.startTime.localeCompare(b.startTime);
+    // 3. 時間順 (HH:mm)
+    const timeA = a.startTime || "00:00";
+    const timeB = b.startTime || "00:00";
+    if (timeA !== timeB) return timeA.localeCompare(timeB);
+
+    // 4. 最終的な安定性のためのID比較
+    return a.id.localeCompare(b.id);
   };
 
   function getDailyEntries(day: Date) {
@@ -1333,8 +1340,8 @@ function CalendarApp() {
                       const cp = commPresets.find(c => c.id === p.linkedCommutingPresetId);
                       if (cp) setFormCommuting(cp.amount);
                     }
-                    if (p.displayOrder !== undefined && p.displayOrder !== null && p.displayOrder !== "") {
-                      setFormDisplayOrder(Number(p.displayOrder));
+                    if (typeof p.displayOrder === 'number') {
+                      setFormDisplayOrder(p.displayOrder);
                     } else {
                       setFormDisplayOrder("");
                     }
@@ -1517,8 +1524,8 @@ function CalendarApp() {
                     const cp = commPresets.find(c => c.id === p.linkedCommutingPresetId);
                     if (cp) setEditFormCommuting(cp.amount);
                   }
-                  if (p.displayOrder !== undefined && p.displayOrder !== null && p.displayOrder !== "") {
-                    setEditFormDisplayOrder(Number(p.displayOrder));
+                  if (typeof p.displayOrder === 'number') {
+                    setEditFormDisplayOrder(p.displayOrder);
                   } else {
                     setEditFormDisplayOrder("");
                   }
