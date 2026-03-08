@@ -82,6 +82,7 @@ interface WorkEntry {
   commuting: number;
   commutingPresetId?: string;
   workplace?: string;
+  displayOrder?: number;
 }
 
 const PRESET_COLORS = [
@@ -147,8 +148,23 @@ function CalendarApp() {
     }
   }
 
+  const sortWorkEntries = (a: WorkEntry, b: WorkEntry) => {
+    // 1. 日付順
+    const dateA = new Date(a.date).getTime();
+    const dateB = new Date(b.date).getTime();
+    if (dateA !== dateB) return dateA - dateB;
+
+    // 2. 表示順（固定オーダー）があれば優先
+    const orderA = a.displayOrder ?? 999;
+    const orderB = b.displayOrder ?? 999;
+    if (orderA !== orderB) return orderA - orderB;
+
+    // 3. 時間順
+    return a.startTime.localeCompare(b.startTime);
+  };
+
   function getDailyEntries(day: Date) {
-    return entries.filter(ent => isSameDay(new Date(ent.date), day));
+    return entries.filter(ent => isSameDay(new Date(ent.date), day)).sort(sortWorkEntries);
   }
 
   // --- State ---
@@ -172,7 +188,7 @@ function CalendarApp() {
     if (filterPresetIds.length > 0) {
       base = base.filter(e => filterPresetIds.includes(e.presetId));
     }
-    return base.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    return base.sort(sortWorkEntries);
   }, [entries, currentDate, filterPresetIds, viewMode]);
 
   const summary = useMemo(() => {
@@ -256,6 +272,7 @@ function CalendarApp() {
   const [formCommPresetId, setFormCommPresetId] = useState<string>("c2");
   const [formCommuting, setFormCommuting] = useState(1200);
   const [formWorkplace, setFormWorkplace] = useState("");
+  const [formDisplayOrder, setFormDisplayOrder] = useState<number | "">("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [togglePos, setTogglePos] = useState({ y: 80 }); // Moved down a bit from top
   const [isDragging, setIsDragging] = useState(false);
@@ -275,6 +292,7 @@ function CalendarApp() {
   const [editFormCommPresetId, setEditFormCommPresetId] = useState<string>("c2");
   const [editFormCommuting, setEditFormCommuting] = useState(1200);
   const [editFormWorkplace, setEditFormWorkplace] = useState("");
+  const [editFormDisplayOrder, setEditFormDisplayOrder] = useState<number | "">("");
   const [editDurationMinutes, setEditDurationMinutes] = useState(180);
 
   const openEditModal = (entry: WorkEntry) => {
@@ -286,6 +304,7 @@ function CalendarApp() {
     setEditFormCommuting(entry.commuting);
     setEditFormCommPresetId(entry.commutingPresetId || "");
     setEditFormWorkplace(entry.workplace || "");
+    setEditFormDisplayOrder(entry.displayOrder ?? "");
     try {
       const start = parse(entry.startTime, "HH:mm", new Date());
       const end = parse(entry.endTime, "HH:mm", new Date());
@@ -1190,6 +1209,7 @@ function CalendarApp() {
                               setFormCommuting(entry.commuting);
                               setFormCommPresetId(entry.commutingPresetId || "");
                               setFormWorkplace(entry.workplace || "");
+                              setFormDisplayOrder(entry.displayOrder ?? "");
                               const start = parse(entry.startTime, "HH:mm", new Date());
                               const end = parse(entry.endTime, "HH:mm", new Date());
                               let diff = differenceInMinutes(end, start);
@@ -1338,6 +1358,10 @@ function CalendarApp() {
                   <Input type="number" value={formCommuting} onChange={(e) => setFormCommuting(Number(e.target.value))} className="pl-12 h-14 rounded-2xl text-xl font-black bg-gray-50 border-none shadow-inner" />
                 </div>
               </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-gray-500 ml-1">表示順 (小さいほど上、空欄は時間順)</Label>
+                <Input type="number" value={formDisplayOrder} onChange={(e) => setFormDisplayOrder(e.target.value === "" ? "" : Number(e.target.value))} className="h-14 rounded-2xl text-xl font-black bg-gray-50 border-none shadow-inner px-5" placeholder="例: 1" />
+              </div>
               <Button onClick={() => {
                 const newEntry: WorkEntry = {
                   id: Math.random().toString(36).substr(2, 9),
@@ -1347,7 +1371,8 @@ function CalendarApp() {
                   presetId: formPresetId,
                   commuting: formCommuting,
                   commutingPresetId: formCommPresetId,
-                  workplace: formWorkplace
+                  workplace: formWorkplace,
+                  displayOrder: formDisplayOrder === "" ? undefined : formDisplayOrder
                 };
                 setEntries(prev => [...prev, newEntry]);
                 updateWorkplaceHistory(formWorkplace);
@@ -1383,6 +1408,7 @@ function CalendarApp() {
                     setFormCommuting(editFormCommuting);
                     setFormCommPresetId(editFormCommPresetId);
                     setFormWorkplace(editFormWorkplace);
+                    setFormDisplayOrder(editFormDisplayOrder);
                     setDurationMinutes(editDurationMinutes);
                     setIsCopying(true);
                     setIsEditEntryOpen(false);
@@ -1514,6 +1540,11 @@ function CalendarApp() {
               </div>
             </div>
 
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-gray-500 ml-1">表示順 (小さいほど上、空欄は時間順)</Label>
+              <Input type="number" value={editFormDisplayOrder} onChange={(e) => setEditFormDisplayOrder(e.target.value === "" ? "" : Number(e.target.value))} className="h-14 rounded-2xl text-xl font-black bg-gray-50 border-none shadow-inner px-5" placeholder="例: 1" />
+            </div>
+
             <div className="flex gap-3">
               <Button
                 variant="outline"
@@ -1536,7 +1567,8 @@ function CalendarApp() {
                     presetId: editFormPresetId,
                     commuting: editFormCommuting,
                     commutingPresetId: editFormCommPresetId,
-                    workplace: editFormWorkplace
+                    workplace: editFormWorkplace,
+                    displayOrder: editFormDisplayOrder === "" ? undefined : editFormDisplayOrder
                   } : ent));
                   updateWorkplaceHistory(editFormWorkplace);
                   setIsEditEntryOpen(false);
