@@ -20,7 +20,8 @@ import {
   addWeeks,
   subWeeks,
   addMinutes,
-  parse
+  parse,
+  startOfDay
 } from "date-fns";
 import { ja } from "date-fns/locale";
 import {
@@ -150,8 +151,8 @@ function CalendarApp() {
 
   const sortWorkEntries = (a: WorkEntry, b: WorkEntry) => {
     // 1. 日付順
-    const dateA = new Date(a.date).getTime();
-    const dateB = new Date(b.date).getTime();
+    const dateA = startOfDay(new Date(a.date)).getTime();
+    const dateB = startOfDay(new Date(b.date)).getTime();
     if (dateA !== dateB) return dateA - dateB;
 
     // 2. 表示順（固定オーダー）があれば優先
@@ -937,7 +938,7 @@ function CalendarApp() {
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <Button variant="secondary" size="icon" className="h-10 w-12 bg-gray-100/50 rounded-md" onClick={() => { setFormDate(currentDate); setIsCopying(false); setIsAddEntryOpen(true); }}>
+            <Button variant="secondary" size="icon" className="h-10 w-12 bg-gray-100/50 rounded-md" onClick={() => { setFormDate(startOfDay(currentDate)); setIsCopying(false); setIsAddEntryOpen(true); }}>
               <Plus className="h-6 w-6 text-gray-600" />
             </Button>
 
@@ -1253,7 +1254,7 @@ function CalendarApp() {
                   <input
                     type="date"
                     value={format(formDate, "yyyy-MM-dd")}
-                    onChange={(e) => setFormDate(new Date(e.target.value))}
+                    onChange={(e) => setFormDate(startOfDay(new Date(e.target.value)))}
                     className="w-full rounded-2xl h-14 text-xl font-black bg-gray-50 border-none shadow-inner pl-12 pr-4 focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
@@ -1365,7 +1366,7 @@ function CalendarApp() {
               <Button onClick={() => {
                 const newEntry: WorkEntry = {
                   id: Math.random().toString(36).substr(2, 9),
-                  date: formDate.toISOString(),
+                  date: startOfDay(formDate).toISOString(),
                   startTime: formStart,
                   endTime: formEnd,
                   presetId: formPresetId,
@@ -1561,7 +1562,7 @@ function CalendarApp() {
                   if (!editingEntry) return;
                   setEntries(prev => prev.map(ent => ent.id === editingEntry.id ? {
                     ...ent,
-                    date: editFormDate.toISOString(),
+                    date: startOfDay(editFormDate).toISOString(),
                     startTime: editFormStart,
                     endTime: editFormEnd,
                     presetId: editFormPresetId,
