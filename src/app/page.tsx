@@ -976,10 +976,50 @@ function CalendarApp() {
     }
   };
 
+  const [swipeStart, setSwipeStart] = useState<{ x: number, y: number } | null>(null);
+
+  const handlePrev = () => {
+    if (viewMode === "year") setCurrentDate(subYears(currentDate, 1));
+    else if (viewMode === "month" || viewMode === "list") setCurrentDate(subMonths(currentDate, 1));
+    else if (viewMode === "week") setCurrentDate(subWeeks(currentDate, 1));
+    else if (viewMode === "day") setCurrentDate(subDays(currentDate, 1));
+  };
+
+  const handleNext = () => {
+    if (viewMode === "year") setCurrentDate(addYears(currentDate, 1));
+    else if (viewMode === "month" || viewMode === "list") setCurrentDate(addMonths(currentDate, 1));
+    else if (viewMode === "week") setCurrentDate(addWeeks(currentDate, 1));
+    else if (viewMode === "day") setCurrentDate(addDays(currentDate, 1));
+  };
+
+  const handleMainTouchStart = (e: React.TouchEvent) => {
+    setSwipeStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+  };
+
+  const handleMainTouchEnd = (e: React.TouchEvent) => {
+    if (!swipeStart) return;
+    const deltaX = e.changedTouches[0].clientX - swipeStart.x;
+    const deltaY = e.changedTouches[0].clientY - swipeStart.y;
+    
+    // Check if it's a valid swipe (vertical distance > 50px, and vertical movement > horizontal movement * 1.5)
+    if (Math.abs(deltaY) > 50 && Math.abs(deltaY) > Math.abs(deltaX) * 1.5) {
+      if (deltaY > 0) {
+        handlePrev(); // swipe down -> go back
+      } else {
+        handleNext(); // swipe up -> go forward
+      }
+    }
+    setSwipeStart(null);
+  };
+
   return (
     <div className="flex h-screen w-full bg-white select-none overflow-hidden font-sans">
       {/* --- Main Content Area --- */}
-      <div className="flex flex-col flex-1 h-full min-w-0">
+      <div 
+        className="flex flex-col flex-1 h-full min-w-0"
+        onTouchStart={handleMainTouchStart}
+        onTouchEnd={handleMainTouchEnd}
+      >
 
         {/* Header */}
         <header className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
@@ -1009,20 +1049,10 @@ function CalendarApp() {
               )}
             </h1>
             <div className="flex items-center gap-1 ml-4 scale-75 md:scale-100 origin-left">
-              <Button variant="ghost" size="icon" onClick={() => {
-                if (viewMode === "year") setCurrentDate(subYears(currentDate, 1));
-                else if (viewMode === "month" || viewMode === "list") setCurrentDate(subMonths(currentDate, 1));
-                else if (viewMode === "week") setCurrentDate(subWeeks(currentDate, 1));
-                else if (viewMode === "day") setCurrentDate(subDays(currentDate, 1));
-              }}>
+              <Button variant="ghost" size="icon" onClick={handlePrev}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" onClick={() => {
-                if (viewMode === "year") setCurrentDate(addYears(currentDate, 1));
-                else if (viewMode === "month" || viewMode === "list") setCurrentDate(addMonths(currentDate, 1));
-                else if (viewMode === "week") setCurrentDate(addWeeks(currentDate, 1));
-                else if (viewMode === "day") setCurrentDate(addDays(currentDate, 1));
-              }}>
+              <Button variant="ghost" size="icon" onClick={handleNext}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
