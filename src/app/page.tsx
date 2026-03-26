@@ -54,6 +54,7 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
 
 // --- Types ---
 interface HourlyRatePreset {
@@ -1370,13 +1371,31 @@ function CalendarApp() {
               <div className="space-y-2">
                 <Label className="text-xs font-bold text-gray-500 ml-1">日付</Label>
                 <div className="relative">
-                  <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-300" />
-                  <input
-                    type="date"
-                    value={format(formDate, "yyyy-MM-dd")}
-                    onChange={(e) => setFormDate(startOfDay(new Date(e.target.value)))}
-                    className="w-full rounded-2xl h-14 text-xl font-black bg-gray-50 border-none shadow-inner pl-12 pr-4 focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full rounded-2xl h-14 text-xl font-black bg-gray-50 border-none shadow-inner pl-12 pr-4 flex items-center justify-start text-left focus:ring-2 focus:ring-blue-500 outline-none hover:bg-gray-100",
+                          !formDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="absolute left-4 h-5 w-5 text-gray-300" />
+                        {formDate ? format(formDate, "yyyy-MM-dd") : <span>日付を選択</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 rounded-[2rem] border-none shadow-2xl z-[100]" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={formDate}
+                        onSelect={(date) => { if (date) setFormDate(startOfDay(date)); }}
+                        initialFocus
+                        weekStartsOn={1}
+                        locale={ja}
+                        className="p-4"
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
 
@@ -1554,13 +1573,31 @@ function CalendarApp() {
             <div className="space-y-2">
               <Label className="text-xs font-bold text-gray-500 ml-1">日付</Label>
               <div className="relative">
-                <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-300" />
-                <input
-                  type="date"
-                  value={format(editFormDate, "yyyy-MM-dd")}
-                  onChange={(e) => setEditFormDate(new Date(e.target.value))}
-                  className="w-full rounded-2xl h-14 text-xl font-black bg-gray-50 border-none shadow-inner pl-12 pr-4 focus:ring-2 focus:ring-blue-500 outline-none"
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full rounded-2xl h-14 text-xl font-black bg-gray-50 border-none shadow-inner pl-12 pr-4 flex items-center justify-start text-left focus:ring-2 focus:ring-blue-500 outline-none hover:bg-gray-100",
+                        !editFormDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="absolute left-4 h-5 w-5 text-gray-300" />
+                      {editFormDate ? format(editFormDate, "yyyy-MM-dd") : <span>日付を選択</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 rounded-[2rem] border-none shadow-2xl z-[100]" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={editFormDate}
+                      onSelect={(date) => { if (date) setEditFormDate(startOfDay(date)); }}
+                      initialFocus
+                      weekStartsOn={1}
+                      locale={ja}
+                      className="p-4"
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
 
