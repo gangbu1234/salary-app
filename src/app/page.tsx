@@ -243,7 +243,7 @@ function CalendarApp() {
   }
 
   // --- State ---
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 2, 3)); // March 2026 as per screenshot
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<"day" | "week" | "month" | "year" | "list">("month");
   const [entries, setEntries] = useState<WorkEntry[]>([]);
   const [filterPresetIds, setFilterPresetIds] = useState<string[]>([]);
