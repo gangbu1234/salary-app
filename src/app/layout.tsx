@@ -16,7 +16,6 @@ export const metadata: Metadata = {
   title: "給与売上概算",
   description: "勤務時間と時給から給与を概算するアプリ",
   manifest: "/manifest.json",
-  themeColor: "#ffffff",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -26,6 +25,10 @@ export const metadata: Metadata = {
     icon: "/icon.png",
     apple: "/apple-touch-icon.png",
   },
+};
+
+export const viewport = {
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({
