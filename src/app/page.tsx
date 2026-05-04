@@ -448,6 +448,28 @@ function CalendarApp() {
     } catch (e) { }
   };
 
+  // 支払集計ダイアログが開いたときに「当月の10日」に近い項目へスクロール
+  useEffect(() => {
+    if (isPaydayAggregationOpen && paydayAggregations.length > 0) {
+      const now = new Date();
+      const targetDate = new Date(now.getFullYear(), now.getMonth(), 10);
+      
+      const activeAggs = paydayAggregations.filter(agg => agg.name !== "未設定");
+      if (activeAggs.length === 0) return;
+
+      const closest = activeAggs.reduce((prev, curr) => {
+        return (Math.abs(curr.dateObj.getTime() - targetDate.getTime()) < Math.abs(prev.dateObj.getTime() - targetDate.getTime()) ? curr : prev);
+      }, activeAggs[0]);
+      
+      if (closest) {
+        setTimeout(() => {
+          const el = document.getElementById(`pay-item-${format(closest.dateObj, 'yyyyMMdd')}`);
+          el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+      }
+    }
+  }, [isPaydayAggregationOpen, paydayAggregations]);
+
   // Initialize toggle position after mount to avoid SSR issues
   useEffect(() => {
     setTogglePos({ y: window.innerHeight / 2 - 24 });
@@ -807,7 +829,7 @@ function CalendarApp() {
                   <p className="text-2xl font-bold text-gray-300">表示できる記録がありません</p>
                 </div>
               ) : (
-                <div className="overflow-hidden rounded-[2.5rem] border border-gray-100 shadow-sm">
+                <div className="overflow-x-auto rounded-[2.5rem] border border-gray-100 shadow-sm">
                   <table className="w-full text-left border-collapse">
                     <thead className="bg-gray-50 border-b border-gray-100">
                       <tr>
@@ -1992,7 +2014,11 @@ function CalendarApp() {
               </div>
             ) : (
               paydayAggregations.filter(agg => agg.name !== "未設定").map(agg => (
-                <div key={agg.name} className="bg-white p-6 rounded-[2rem] border border-gray-100/50 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
+                <div 
+                  key={agg.name} 
+                  id={`pay-item-${format(agg.dateObj, "yyyyMMdd")}`}
+                  className="bg-white p-6 rounded-[2rem] border border-gray-100/50 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow"
+                >
                   <div>
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">支払日</p>
                     <p className="text-2xl font-black text-gray-800 tracking-tighter">{agg.name}</p>
