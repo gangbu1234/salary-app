@@ -1002,12 +1002,13 @@ function CalendarApp() {
     const deltaX = e.changedTouches[0].clientX - swipeStart.x;
     const deltaY = e.changedTouches[0].clientY - swipeStart.y;
     
-    // Check if it's a valid swipe (vertical distance > 50px, and vertical movement > horizontal movement * 1.5)
-    if (Math.abs(deltaY) > 50 && Math.abs(deltaY) > Math.abs(deltaX) * 1.5) {
-      if (deltaY > 0) {
-        handlePrev(); // swipe down -> go back
+    // Check if it's a valid swipe (horizontal distance > 60px, and horizontal movement > vertical movement * 2)
+    // Stricter check to prevent vertical scrolling from triggering month changes.
+    if (Math.abs(deltaX) > 60 && Math.abs(deltaX) > Math.abs(deltaY) * 2) {
+      if (deltaX > 0) {
+        handlePrev(); // swipe right -> go back
       } else {
-        handleNext(); // swipe up -> go forward
+        handleNext(); // swipe left -> go forward
       }
     }
     setSwipeStart(null);
@@ -1020,6 +1021,7 @@ function CalendarApp() {
         className="flex flex-col flex-1 h-full min-w-0"
         onTouchStart={handleMainTouchStart}
         onTouchEnd={handleMainTouchEnd}
+        style={{ touchAction: 'pan-y' }}
       >
 
         {/* Header */}
