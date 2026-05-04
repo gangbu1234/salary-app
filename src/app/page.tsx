@@ -994,8 +994,8 @@ function CalendarApp() {
   };
 
   const handleMainTouchStart = (e: React.TouchEvent) => {
-    // Disable swipe navigation when any dialog is open
-    if (isPaydayAggregationOpen || isAddEntryOpen || isSettingsOpen || isDayPopupOpen || isEditEntryOpen) {
+    // Disable swipe navigation when any dialog is open or in list view mode
+    if (isPaydayAggregationOpen || isAddEntryOpen || isSettingsOpen || isDayPopupOpen || isEditEntryOpen || viewMode === "list") {
       setSwipeStart(null);
       return;
     }
